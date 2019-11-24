@@ -61,7 +61,7 @@ namespace dotnetCampus.Threading
             {
                 while (shouldContinue)
                 {
-                    Exception exception;
+                    Exception? exception;
                     bool isCompleted;
 
                     // 加锁获取此时此刻的 Token 集合副本。

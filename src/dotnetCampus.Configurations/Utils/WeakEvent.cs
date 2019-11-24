@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace dotnetCampus.Configurations.Utils
+namespace Walterlv.WeakEvents
 {
     /// <summary>
     /// 定义一个弱事件。
@@ -63,7 +62,7 @@ namespace dotnetCampus.Configurations.Utils
             lock (_locker)
             {
                 // 获取委托对应的目标实例。
-                var target = originalHandler.Target;
+                var target = originalHandler.Target ?? throw new ArgumentException("无法将弱事件应用于没有对象的纯函数中。", nameof(originalHandler));
                 var method = originalHandler.Method;
 
                 // 找到目前是否有已经存储过的对 target 的弱引用实例，如果有，我们将复用此实例，而不是加入到集合中。
@@ -78,7 +77,7 @@ namespace dotnetCampus.Configurations.Utils
                     weakEventHandler.Add(originalHandler, castedHandler);
                     _handlers.Add(target, weakEventHandler);
                 }
-                else if(_handlers.TryGetValue(target, out var weakEventHandler))
+                else if (_handlers.TryGetValue(target, out var weakEventHandler))
                 {
                     // 如果找到了已经存储过的弱引用实例，则为其添加一个新的事件处理器。
                     weakEventHandler.Add(originalHandler, castedHandler);
@@ -100,7 +99,7 @@ namespace dotnetCampus.Configurations.Utils
             lock (_locker)
             {
                 // 获取委托对应的目标实例。
-                var target = originalHandler.Target;
+                var target = originalHandler.Target ?? throw new ArgumentException("无法将弱事件应用于没有方法的纯对象中。", nameof(originalHandler));
 
                 // 找到目前是否有已经存储过的对 target 的弱引用实例，如果有，我们将复用此实例，而不是加入到集合中。
                 // 注意，这里的判定使用的是 ReferenceEquals，因为 ConditionalWeakTable 的比较用的是此方法，这可以确保回收时机两者一致。
@@ -133,7 +132,7 @@ namespace dotnetCampus.Configurations.Utils
         /// </returns>
         public bool Invoke(TSender sender, TArgs e)
         {
-            List<Action<TSender, TArgs>> invokingHandlers = null;
+            List<Action<TSender, TArgs>>? invokingHandlers = null;
             lock (_locker)
             {
                 var weakEventHandlerList = _relatedInstances.ConvertAll(x =>
@@ -151,7 +150,7 @@ namespace dotnetCampus.Configurations.Utils
                 if (anyHandlerAlive)
                 {
                     // 如果依然存活，则引发事件（无论是否还剩余订阅，这可以与一般事件行为保持一致）。
-                    invokingHandlers = weakEventHandlerList.Where(x => x != null).SelectMany(x => x.GetInvokingHandlers()).ToList();
+                    invokingHandlers = weakEventHandlerList.OfType<WeakEventHandler>().SelectMany(x => x.GetInvokingHandlers()).ToList();
                 }
                 else
                 {
@@ -181,7 +180,7 @@ namespace dotnetCampus.Configurations.Utils
         /// </summary>
         private sealed class WeakEventHandler
         {
-            public void Add(MulticastDelegate handler, Action<TSender, TArgs> castedHandler)
+            internal void Add(MulticastDelegate handler, Action<TSender, TArgs> castedHandler)
             {
                 if (handler is null)
                 {
@@ -241,13 +240,13 @@ namespace dotnetCampus.Configurations.Utils
             /// <summary>
             /// 获取此弱事件处理器关联的目标对象。
             /// </summary>
-            public object Target { get; private set; }
+            internal object? Target { get; private set; }
 
             /// <summary>
             /// 获取此弱事件处理器关联的目标方法或方法组，以及所有基于此方法组转换而得的可以直接调用的委托。
             /// 在实际上引发事件的时候，应该使用此转换后的实例，以避免使用原始事件处理函数导致的反射、IL 生成等耗性能的执行。
             /// </summary>
-            public Dictionary<MethodInfo, List<Action<TSender, TArgs>>> MethodHandlers { get; } = new Dictionary<MethodInfo, List<Action<TSender, TArgs>>>();
+            private Dictionary<MethodInfo, List<Action<TSender, TArgs>>> MethodHandlers { get; } = new Dictionary<MethodInfo, List<Action<TSender, TArgs>>>();
         }
     }
 

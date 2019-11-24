@@ -15,6 +15,11 @@ namespace dotnetCampus.Configurations
         /// <returns>去掉后缀的派生类名称。</returns>
         internal static string GetClassNameWithoutSuffix<T>(this T @this)
         {
+            if (@this is null)
+            {
+                throw new ArgumentNullException(nameof(@this));
+            }
+
             var name = @this.GetType().Name;
             var index = name.IndexOf(typeof(T).Name, StringComparison.InvariantCulture);
             name = index >= 0 ? name.Substring(0, index) : name;

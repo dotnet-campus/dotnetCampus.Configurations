@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using dotnetCampus.Configurations.Utils;
+using Walterlv.WeakEvents;
 
 namespace dotnetCampus.Configurations.IO
 {

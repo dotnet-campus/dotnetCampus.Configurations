@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using dotnetCampus.Configurations.IO;
 
@@ -17,10 +18,10 @@ namespace dotnetCampus.IO
         private readonly FileInfo _file;
 
         /// <summary>获取当前监视的文件夹监视器。可能会因为文件（夹）不存在而改变。</summary>
-        private FileSystemWatcher _watcher;
+        private FileSystemWatcher? _watcher;
 
         /// <summary>当前正在等待的异步任务。</summary>
-        private Task _waitingAsyncAction;
+        private Task? _waitingAsyncAction;
 
         /// <summary>
         /// 创建用于监视 <paramref name="fileName"/> 的 <see cref="FileWatcher"/>。
@@ -38,7 +39,7 @@ namespace dotnetCampus.IO
         /// <summary>
         /// 当要监视的文件的内容改变的时候发生事件。
         /// </summary>
-        public event EventHandler Changed;
+        public event EventHandler? Changed;
 
         private void OnChanged() => Changed?.Invoke(this, EventArgs.Empty);
 
@@ -79,8 +80,8 @@ namespace dotnetCampus.IO
             Stop();
 
             var pair = FindWatchableLevel();
-            var directory = pair.Directory;
-            var file = pair.File;
+            var directory = pair._directory;
+            var file = pair._file;
             if (File.Exists(_file.FullName))
             {
                 // 如果文件存在，说明这是最终的文件。
@@ -157,7 +158,7 @@ namespace dotnetCampus.IO
                 }
 
                 // 如果连文件夹都不存在，那么就需要查找上一层文件夹。
-                path = directory;
+                path = directory ?? throw new InvalidOperationException($"无法找到被监视路径的顶级目录，路径为 {path} 。");
             }
         }
 
@@ -172,15 +173,16 @@ namespace dotnetCampus.IO
             }
         }
 
+        [StructLayout(LayoutKind.Auto)]
         private readonly struct FolderPair
         {
-            internal readonly string Directory;
-            internal readonly string File;
+            internal readonly string? _directory;
+            internal readonly string? _file;
 
-            public FolderPair(string directory, string file)
+            public FolderPair(string? directory, string? file)
             {
-                Directory = directory;
-                File = file;
+                _directory = directory;
+                _file = file;
             }
         }
     }

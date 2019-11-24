@@ -26,7 +26,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         /// <param name="key">配置项的标识符。</param>
         /// <returns>配置项的值。</returns>
-        string IConfigurationRepo.GetValue(string key)
+        string? IConfigurationRepo.GetValue(string key)
         {
             VerifyKey(key);
 
@@ -39,7 +39,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         /// <param name="key">配置项的标识符。</param>
         /// <param name="value">配置项的值。</param>
-        void IConfigurationRepo.SetValue(string key, string value)
+        void IConfigurationRepo.SetValue(string key, string? value)
         {
             VerifyKey(key, true);
 
@@ -91,7 +91,11 @@ namespace dotnetCampus.Configurations.Core
         /// <returns></returns>
         public async Task<string> TryReadAsync(string key, string @default = "")
         {
-            if (@default == null) throw new ArgumentNullException(nameof(@default));
+            if (@default == null)
+            {
+                throw new ArgumentNullException(nameof(@default));
+            }
+
             VerifyKey(key);
 
             var value = await ReadValueCoreAsync(key).ConfigureAwait(false);
@@ -103,7 +107,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
-        public async Task WriteAsync(string key, string value)
+        public async Task WriteAsync(string key, string? value)
         {
             VerifyKey(key, true);
 
@@ -115,7 +119,7 @@ namespace dotnetCampus.Configurations.Core
             }
 
             // 由子类处理值的改变。
-            if (string.IsNullOrEmpty(value))
+            if (value is null || string.IsNullOrEmpty(value))
             {
                 await RemoveValueCoreAsync(key).ConfigureAwait(false);
             }
@@ -155,7 +159,7 @@ namespace dotnetCampus.Configurations.Core
         /// <returns>
         /// 执行项的 Key，如果不存在，则为 null / Task&lt;string&gt;.FromResult(null)"/>。
         /// </returns>
-        protected abstract Task<string> ReadValueCoreAsync(string key);
+        protected abstract Task<string?> ReadValueCoreAsync(string key);
 
         /// <summary>
         /// 派生类重写此方法时，将为指定的 Key 存储指定的值。
@@ -208,9 +212,9 @@ namespace dotnetCampus.Configurations.Core
             /// <summary>
             /// 获取此对象储存的跟踪的异步操作。
             /// </summary>
-            public Task GetTrackedAction() => _trackedAction;
+            public Task? GetTrackedAction() => _trackedAction;
 
-            private Task _trackedAction;
+            private Task? _trackedAction;
         }
 
         /// <summary>

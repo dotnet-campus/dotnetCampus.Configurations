@@ -19,7 +19,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         /// <param name="key">配置项的标识符。</param>
         /// <returns>配置项的值。</returns>
-        string GetValue(string key);
+        string? GetValue(string key);
 
         /// <summary>
         /// 设置指定配置项的值，如果设置为 null，可能删除 <paramref name="key"/> 配置项。
@@ -27,7 +27,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         /// <param name="key">配置项的标识符。</param>
         /// <param name="value">配置项的值。</param>
-        void SetValue(string key, string value);
+        void SetValue(string key, string? value);
 
         /// <summary>
         /// 删除所有满足 <paramref name="keyFilter"/> 规则的 Key 所表示的配置项。

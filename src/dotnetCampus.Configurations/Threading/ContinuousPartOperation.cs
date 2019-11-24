@@ -13,14 +13,14 @@ namespace dotnetCampus.Threading
     /// </summary>
     public class ContinuousPartOperation
     {
-        private readonly TaskCompletionSource<object> _source;
+        private readonly TaskCompletionSource<object?> _source;
         private readonly Awaiter _awaiter;
-        private Action _continuation;
-        private Exception _exception;
+        private Action? _continuation;
+        private Exception? _exception;
 
         internal ContinuousPartOperation()
         {
-            _source = new TaskCompletionSource<object>();
+            _source = new TaskCompletionSource<object?>();
             _awaiter = new Awaiter(this);
         }
 

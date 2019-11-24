@@ -26,7 +26,7 @@ namespace dotnetCampus.Configurations
         /// <summary>
         /// 创建 <see cref="Configuration"/> 类型的新实例，当存储值时，其前准为 <paramref name="sectionName"/>。
         /// </summary>
-        protected Configuration(string sectionName)
+        protected Configuration(string? sectionName)
             => _section = string.IsNullOrEmpty(sectionName) ? "" : $"{sectionName}.";
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
-        protected bool? GetBoolean([CallerMemberName] string key = null)
+        protected bool? GetBoolean([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
             return string.IsNullOrWhiteSpace(value) ? (bool?) null : bool.Parse(value);
@@ -47,7 +47,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
-        protected decimal? GetDecimal([CallerMemberName] string key = null)
+        protected decimal? GetDecimal([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
             return string.IsNullOrWhiteSpace(value)
@@ -61,7 +61,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
-        protected double? GetDouble([CallerMemberName] string key = null)
+        protected double? GetDouble([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
             return string.IsNullOrWhiteSpace(value)
@@ -75,7 +75,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
-        protected float? GetSingle([CallerMemberName] string key = null)
+        protected float? GetSingle([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
             return string.IsNullOrWhiteSpace(value)
@@ -89,7 +89,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
-        protected int? GetInt32([CallerMemberName] string key = null)
+        protected int? GetInt32([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
             return string.IsNullOrWhiteSpace(value)
@@ -103,7 +103,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
-        protected long? GetInt64([CallerMemberName] string key = null)
+        protected long? GetInt64([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
             return string.IsNullOrWhiteSpace(value)
@@ -120,7 +120,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
-        protected ConfigurationString? GetString([CallerMemberName] string key = null)
+        protected ConfigurationString? GetString([CallerMemberName] string? key = null)
             => GetValue(key);
 
         /// <summary>
@@ -129,9 +129,17 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
-        internal string GetValue([CallerMemberName] string key = null)
+        internal string? GetValue([CallerMemberName] string? key = null)
         {
-            if (Repo == null) throw new InvalidOperationException($"必须通过 {nameof(IAppConfigurator)}.Of 使用配置。");
+            if (key is null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
+
+            if (Repo == null)
+            {
+                throw new InvalidOperationException($"必须通过 {nameof(IAppConfigurator)}.Of 使用配置。");
+            }
 
             var value = Repo.GetValue($"{_section}{key}");
             return value;
@@ -142,7 +150,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
-        protected void SetValue(bool? value, [CallerMemberName] string key = null)
+        protected void SetValue(bool? value, [CallerMemberName] string? key = null)
             => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
 
         /// <summary>
@@ -150,7 +158,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
-        protected void SetValue(decimal? value, [CallerMemberName] string key = null)
+        protected void SetValue(decimal? value, [CallerMemberName] string? key = null)
             => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
 
         /// <summary>
@@ -158,7 +166,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
-        protected void SetValue(double? value, [CallerMemberName] string key = null)
+        protected void SetValue(double? value, [CallerMemberName] string? key = null)
             => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
 
         /// <summary>
@@ -166,7 +174,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
-        protected void SetValue(float? value, [CallerMemberName] string key = null)
+        protected void SetValue(float? value, [CallerMemberName] string? key = null)
             => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
 
         /// <summary>
@@ -174,7 +182,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
-        protected void SetValue(int? value, [CallerMemberName] string key = null)
+        protected void SetValue(int? value, [CallerMemberName] string? key = null)
             => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
 
         /// <summary>
@@ -182,18 +190,26 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
-        protected void SetValue(long? value, [CallerMemberName] string key = null)
+        protected void SetValue(long? value, [CallerMemberName] string? key = null)
             => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
-        /// 不允许 <paramref name="value"/> 为 null；如果需要存入空值，请使用 <see cref="String.Empty"/>。
+        /// 不允许 <paramref name="value"/> 为 null；如果需要存入空值，请使用 <see cref="string.Empty"/>。
         /// </summary>
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
-        protected internal void SetValue(ConfigurationString? value, [CallerMemberName] string key = null)
+        protected internal void SetValue(ConfigurationString? value, [CallerMemberName] string? key = null)
         {
-            if (Repo == null) throw new InvalidOperationException($"必须通过 {nameof(IAppConfigurator)}.Of 使用配置。");
+            if (key is null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
+
+            if (Repo == null)
+            {
+                throw new InvalidOperationException($"必须通过 {nameof(IAppConfigurator)}.Of 使用配置。");
+            }
 
             // value.ToString() 可以拿到一定非 null 的字符串；
             // value?.ToString() 则可以在字符串为 null/"" 时拿到 null。
@@ -205,7 +221,10 @@ namespace dotnetCampus.Configurations
         /// </summary>
         protected void ClearValues()
         {
-            if (Repo == null) throw new InvalidOperationException($"必须通过 {nameof(IAppConfigurator)}.Of 使用配置。");
+            if (Repo == null)
+            {
+                throw new InvalidOperationException($"必须通过 {nameof(IAppConfigurator)}.Of 使用配置。");
+            }
 
             Repo.ClearValues(key => key.StartsWith(_section, StringComparison.InvariantCulture));
         }
@@ -218,6 +237,6 @@ namespace dotnetCampus.Configurations
         /// <summary>
         /// 获取用于管理应用程序字符串配置项的管理器。
         /// </summary>
-        internal IConfigurationRepo Repo { get; set; }
+        internal IConfigurationRepo? Repo { get; set; }
     }
 }

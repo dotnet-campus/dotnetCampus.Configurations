@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 #pragma warning disable CA2225 // Operator overloads have named alternates
 #pragma warning disable CA1815 // Override equals and operator equals on value types
@@ -9,6 +10,7 @@ namespace dotnetCampus.Threading
     /// <summary>
     /// 为一个操作包装结果信息，包括成功与否、异常和取消信息。
     /// </summary>
+    [StructLayout(LayoutKind.Auto)]
     public readonly struct OperationResult
     {
         /// <summary>
@@ -42,7 +44,7 @@ namespace dotnetCampus.Threading
         /// <summary>
         /// 获取操作过程中发生或收集的异常。
         /// </summary>
-        public Exception Exception { get; }
+        public Exception? Exception { get; }
 
         /// <summary>
         /// 获取此操作是否已被取消。
@@ -57,13 +59,14 @@ namespace dotnetCampus.Threading
         /// <summary>
         /// 将操作结果视为异常。
         /// </summary>
-        public static implicit operator Exception(OperationResult result) => result.Exception;
+        public static implicit operator Exception?(OperationResult result) => result.Exception;
 
         /// <summary>
         /// 将异常作为操作结果使用。
         /// </summary>
-        public static implicit operator OperationResult(Exception exception)
-            => exception is null ? null : new OperationResult(exception);
+        public static implicit operator OperationResult(Exception exception) => exception is null
+            ? new OperationResult(true)
+            : new OperationResult(exception);
 
         /// <summary>
         /// 将成功或取消信息作为操作结果使用。

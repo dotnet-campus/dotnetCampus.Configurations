@@ -17,10 +17,18 @@ namespace dotnetCampus.Configurations.Converters
         /// <param name="this">配置项组派生类的实例。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
-        public static T? GetValue<T>(this Configuration @this, [CallerMemberName] string key = null)
+        public static T? GetValue<T>(this Configuration @this, [CallerMemberName] string? key = null)
             where T : struct
         {
-            if (@this == null) throw new ArgumentNullException(nameof(@this));
+            if (@this == null)
+            {
+                throw new ArgumentNullException(nameof(@this));
+            }
+
+            if (key is null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
 
             var type = typeof(T);
             var value = @this.GetValue(key);
@@ -52,9 +60,18 @@ namespace dotnetCampus.Configurations.Converters
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         public static void SetValue<T>(this Configuration @this,
-            T? value, [CallerMemberName] string key = null) where T : struct
+            T? value, [CallerMemberName] string? key = null) where T : struct
         {
-            if (@this == null) throw new ArgumentNullException(nameof(@this));
+            if (@this == null)
+            {
+                throw new ArgumentNullException(nameof(@this));
+            }
+
+            if (key is null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
+
             var type = typeof(T);
 
             if (value == null)

@@ -1,15 +1,17 @@
-﻿#pragma warning disable CA2225
+﻿using System;
+using System.Runtime.InteropServices;
 
-using System;
+#pragma warning disable CA2225
 
 namespace dotnetCampus.Configurations
 {
     /// <summary>
     /// 表示从 <see cref="Configuration.GetString"/> 中读取出来的配置项字符串的值。
     /// </summary>
+    [StructLayout(LayoutKind.Auto)]
     public readonly struct ConfigurationString : IEquatable<ConfigurationString>
     {
-        private readonly string _value;
+        private readonly string? _value;
 
         /// <summary>
         /// 创建 <see cref="ConfigurationString"/> 的新实例。
@@ -24,9 +26,9 @@ namespace dotnetCampus.Configurations
         /// 将字符串转换为 <see cref="ConfigurationString"/> 以获取可空值类型和非空字符串两者的使用体验优势。
         /// </summary>
         /// <param name="value"></param>
-        public static implicit operator ConfigurationString?(string value)
+        public static implicit operator ConfigurationString?(string? value)
         {
-            return string.IsNullOrEmpty(value) ? (ConfigurationString?) null : new ConfigurationString(value);
+            return value == null || string.IsNullOrEmpty(value) ? (ConfigurationString?)null : new ConfigurationString(value);
         }
 
         /// <summary>
@@ -47,11 +49,11 @@ namespace dotnetCampus.Configurations
         /// <returns>非 null 字符串。</returns>
         public override string ToString()
         {
-            return string.IsNullOrEmpty(_value) ? string.Empty : _value;
+            return _value is null || string.IsNullOrEmpty(_value) ? string.Empty : _value;
         }
 
         /// <inheritdoc />
-        public override bool Equals(object other)
+        public override bool Equals(object? other)
         {
             if (other is ConfigurationString cs)
             {
@@ -73,7 +75,7 @@ namespace dotnetCampus.Configurations
         public bool Equals(string other) => _value == other;
 
         /// <inheritdoc />
-        public override int GetHashCode() => string.IsNullOrEmpty(_value) ? 0 : _value.GetHashCode();
+        public override int GetHashCode() => string.IsNullOrEmpty(_value) ? 0 : StringComparer.Ordinal.GetHashCode(_value);
 
         /// <summary>
         /// 判断两个 <see cref="ConfigurationString"/> 的字符串值是否相等。

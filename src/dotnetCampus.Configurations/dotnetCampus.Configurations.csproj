@@ -4,7 +4,7 @@
     <TargetFrameworks>netstandard2.0;net45;netcoreapp3.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
-    <!--<WarningsAsErrors>$(WarningsAsErrors);CS8600;CS8601;CS8602;CS8603;CS8604;CS8616;CS8618;CS8622;CS8625</WarningsAsErrors>-->
+    <WarningsAsErrors>$(WarningsAsErrors);CS8600;CS8601;CS8602;CS8603;CS8604;CS8609;CS8610;CS8616;CS8618;CS8619;CS8622;CS8625</WarningsAsErrors>
     <RootNamespace>dotnetCampus.Configurations</RootNamespace>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>walterlv</Authors>

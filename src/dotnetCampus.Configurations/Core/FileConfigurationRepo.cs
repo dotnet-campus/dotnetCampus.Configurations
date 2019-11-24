@@ -63,7 +63,7 @@ namespace dotnetCampus.Configurations.Core
         /// <returns>
         /// 执行项的 Key，如果不存在，则为 null / Task&lt;string&gt;.FromResult(null)"/>。
         /// </returns>
-        protected override async Task<string> ReadValueCoreAsync(string key)
+        protected override async Task<string?> ReadValueCoreAsync(string key)
         {
             await LoadFromFileTask.ConfigureAwait(false);
             var value = KeyValues.TryGetValue(key, out var v) ? v : null;
@@ -141,7 +141,7 @@ namespace dotnetCampus.Configurations.Core
         /// <summary>
         /// 在配置文件改变的时候，重新读取文件。
         /// </summary>
-        private async void OnFileChanged(object sender, EventArgs e)
+        private async void OnFileChanged(object? sender, EventArgs e)
         {
             CT.Debug($"检测到文件被改变...", "File");
             var isPending = _isPendingReread;
@@ -237,8 +237,8 @@ namespace dotnetCampus.Configurations.Core
         private void Deserialize(string str)
         {
             var keyValuePairList = str.Split('\n');
-            var keyValue = new Dictionary<string, string>();
-            string key = null;
+            var keyValue = new Dictionary<string, string>(StringComparer.Ordinal);
+            string? key = null;
             var splitString = _splitString;
 
             foreach (var temp in keyValuePairList.Select(temp => temp.Trim()))
@@ -368,7 +368,7 @@ namespace dotnetCampus.Configurations.Core
         private async Task Serialize()
         {
             // 重写尝试 10 次
-            Exception exception = null;
+            Exception? exception = null;
             const int retryWriteCount = 10;
 
             for (var i = 0; i < retryWriteCount; i++)
