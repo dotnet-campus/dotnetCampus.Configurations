@@ -1,0 +1,114 @@
+dotnetCampus.Threading.OperationResult
+dotnetCampus.Threading.OperationResult.OperationResult(System.Exception exception) -> void
+dotnetCampus.Threading.OperationResult.OperationResult(bool isSuccessOrCanceled) -> void
+dotnetCampus.Threading.OperationResult.Success.get -> bool
+dotnetCampus.Threading.OperationResult.Exception.get -> System.Exception
+dotnetCampus.Threading.OperationResult.IsCanceled.get -> bool
+static dotnetCampus.Threading.OperationResult.implicit operator bool(dotnetCampus.Threading.OperationResult result) -> bool
+static dotnetCampus.Threading.OperationResult.implicit operator System.Exception(dotnetCampus.Threading.OperationResult result) -> System.Exception
+static dotnetCampus.Threading.OperationResult.implicit operator dotnetCampus.Threading.OperationResult(System.Exception exception) -> dotnetCampus.Threading.OperationResult
+static dotnetCampus.Threading.OperationResult.implicit operator dotnetCampus.Threading.OperationResult(bool isSuccessOrCanceled) -> dotnetCampus.Threading.OperationResult
+static dotnetCampus.Threading.OperationResult.operator true(dotnetCampus.Threading.OperationResult result) -> bool
+static dotnetCampus.Threading.OperationResult.operator false(dotnetCampus.Threading.OperationResult result) -> bool
+dotnetCampus.Threading.ContinuousPartOperation
+dotnetCampus.Threading.ContinuousPartOperation.GetAwaiter() -> dotnetCampus.Threading.ContinuousPartOperation.Awaiter
+dotnetCampus.Threading.ContinuousPartOperation.Wait() -> void
+dotnetCampus.Threading.CountLimitOperationToken
+dotnetCampus.Threading.CountLimitOperationToken.CountLimitOperationToken(long countLimit) -> void
+dotnetCampus.Threading.CountLimitOperationToken.Operation.get -> dotnetCampus.Threading.ContinuousPartOperation
+dotnetCampus.Threading.CountLimitOperationToken.Complete(bool removeIntermediateExceptions = true) -> void
+dotnetCampus.Threading.CountLimitOperationToken.Pass(long countPassed) -> void
+dotnetCampus.Threading.CountLimitOperationToken.UpdateException(System.Exception exception) -> void
+dotnetCampus.Threading.PartialAwaitableRetry
+dotnetCampus.Threading.PartialAwaitableRetry.PartialAwaitableRetry(System.Func<dotnetCampus.Threading.PartialRetryContext, System.Threading.Tasks.Task<dotnetCampus.Threading.OperationResult>> loopItem) -> void
+dotnetCampus.Threading.PartialAwaitableRetry.JoinAsync(int countLimit) -> dotnetCampus.Threading.ContinuousPartOperation
+dotnetCampus.Threading.PartialRetryContext
+dotnetCampus.Threading.PartialRetryContext.PartialRetryContext() -> void
+dotnetCampus.Threading.PartialRetryContext.StepCount.get -> int
+dotnetCampus.Threading.PartialRetryContext.StepCount.set -> void
+dotnetCampus.Threading.TimeoutOperationToken
+dotnetCampus.Threading.TimeoutOperationToken.TimeoutOperationToken(System.TimeSpan timeout) -> void
+dotnetCampus.Threading.TimeoutOperationToken.Operation.get -> dotnetCampus.Threading.ContinuousPartOperation
+dotnetCampus.Threading.TimeoutOperationToken.Complete(bool removeIntermediateExceptions = true) -> void
+dotnetCampus.Threading.TimeoutOperationToken.Pass(System.TimeSpan passedTimeSinceLastPass) -> void
+dotnetCampus.Threading.TimeoutOperationToken.UpdateException(System.Exception exception) -> void
+dotnetCampus.IO.FileWatcher
+dotnetCampus.IO.FileWatcher.FileWatcher(string fileName) -> void
+dotnetCampus.IO.FileWatcher.FileWatcher(System.IO.FileInfo file) -> void
+dotnetCampus.IO.FileWatcher.Changed -> System.EventHandler
+dotnetCampus.IO.FileWatcher.WatchAsync() -> System.Threading.Tasks.Task
+dotnetCampus.IO.FileWatcher.StopAsync() -> System.Threading.Tasks.Task
+dotnetCampus.Configurations.Configuration
+dotnetCampus.Configurations.Configuration.Configuration() -> void
+dotnetCampus.Configurations.Configuration.Configuration(string sectionName) -> void
+dotnetCampus.Configurations.Configuration.GetBoolean(string key = null) -> bool?
+dotnetCampus.Configurations.Configuration.GetDecimal(string key = null) -> decimal?
+dotnetCampus.Configurations.Configuration.GetDouble(string key = null) -> double?
+dotnetCampus.Configurations.Configuration.GetSingle(string key = null) -> float?
+dotnetCampus.Configurations.Configuration.GetInt32(string key = null) -> int?
+dotnetCampus.Configurations.Configuration.GetInt64(string key = null) -> long?
+dotnetCampus.Configurations.Configuration.GetString(string key = null) -> dotnetCampus.Configurations.ConfigurationString?
+dotnetCampus.Configurations.Configuration.SetValue(bool? value, string key = null) -> void
+dotnetCampus.Configurations.Configuration.SetValue(decimal? value, string key = null) -> void
+dotnetCampus.Configurations.Configuration.SetValue(double? value, string key = null) -> void
+dotnetCampus.Configurations.Configuration.SetValue(float? value, string key = null) -> void
+dotnetCampus.Configurations.Configuration.SetValue(int? value, string key = null) -> void
+dotnetCampus.Configurations.Configuration.SetValue(long? value, string key = null) -> void
+dotnetCampus.Configurations.Configuration.SetValue(dotnetCampus.Configurations.ConfigurationString? value, string key = null) -> void
+dotnetCampus.Configurations.Configuration.ClearValues() -> void
+dotnetCampus.Configurations.ConfigurationString
+static dotnetCampus.Configurations.ConfigurationString.implicit operator dotnetCampus.Configurations.ConfigurationString?(string value) -> dotnetCampus.Configurations.ConfigurationString?
+static dotnetCampus.Configurations.ConfigurationString.implicit operator string(dotnetCampus.Configurations.ConfigurationString? configurationValue) -> string
+override dotnetCampus.Configurations.ConfigurationString.ToString() -> string
+override dotnetCampus.Configurations.ConfigurationString.Equals(object other) -> bool
+dotnetCampus.Configurations.ConfigurationString.Equals(dotnetCampus.Configurations.ConfigurationString other) -> bool
+dotnetCampus.Configurations.ConfigurationString.Equals(string other) -> bool
+override dotnetCampus.Configurations.ConfigurationString.GetHashCode() -> int
+static dotnetCampus.Configurations.ConfigurationString.operator ==(dotnetCampus.Configurations.ConfigurationString left, dotnetCampus.Configurations.ConfigurationString right) -> bool
+static dotnetCampus.Configurations.ConfigurationString.operator !=(dotnetCampus.Configurations.ConfigurationString left, dotnetCampus.Configurations.ConfigurationString right) -> bool
+dotnetCampus.Configurations.DefaultConfiguration
+dotnetCampus.Configurations.DefaultConfiguration.DefaultConfiguration() -> void
+dotnetCampus.Configurations.DefaultConfiguration.this[string key].get -> dotnetCampus.Configurations.ConfigurationString?
+dotnetCampus.Configurations.DefaultConfiguration.this[string key].set -> void
+static dotnetCampus.Configurations.DefaultConfiguration.FromFile(string fileName) -> dotnetCampus.Configurations.DefaultConfiguration
+dotnetCampus.Configurations.IAppConfigurator
+dotnetCampus.Configurations.IAppConfigurator.Default.get -> dotnetCampus.Configurations.DefaultConfiguration
+dotnetCampus.Configurations.IAppConfigurator.Of<TConfiguration>() -> TConfiguration
+dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo
+dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.AsynchronousConfigurationRepo() -> void
+dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.CreateAppConfigurator() -> dotnetCampus.Configurations.IAppConfigurator
+dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.TryReadAsync(string key, string default = "") -> System.Threading.Tasks.Task<string>
+dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.WriteAsync(string key, string value) -> System.Threading.Tasks.Task
+abstract dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.GetKeys() -> System.Collections.Generic.ICollection<string>
+abstract dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.ReadValueCoreAsync(string key) -> System.Threading.Tasks.Task<string>
+abstract dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.WriteValueCoreAsync(string key, string value) -> System.Threading.Tasks.Task
+abstract dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.RemoveValueCoreAsync(string key) -> System.Threading.Tasks.Task
+abstract dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.OnChanged(dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.AsynchronousConfigurationChangeContext context) -> void
+dotnetCampus.Configurations.Core.FileConfigurationRepo
+dotnetCampus.Configurations.Core.FileConfigurationRepo.FileConfigurationRepo(string fileName) -> void
+dotnetCampus.Configurations.Core.FileConfigurationRepo.DelayReadTime.get -> System.TimeSpan
+dotnetCampus.Configurations.Core.FileConfigurationRepo.DelayReadTime.set -> void
+dotnetCampus.Configurations.Core.FileConfigurationRepo.DelaySaveTime.get -> System.TimeSpan
+dotnetCampus.Configurations.Core.FileConfigurationRepo.DelaySaveTime.set -> void
+override dotnetCampus.Configurations.Core.FileConfigurationRepo.GetKeys() -> System.Collections.Generic.ICollection<string>
+override dotnetCampus.Configurations.Core.FileConfigurationRepo.ReadValueCoreAsync(string key) -> System.Threading.Tasks.Task<string>
+override dotnetCampus.Configurations.Core.FileConfigurationRepo.WriteValueCoreAsync(string key, string value) -> System.Threading.Tasks.Task
+override dotnetCampus.Configurations.Core.FileConfigurationRepo.RemoveValueCoreAsync(string key) -> System.Threading.Tasks.Task
+override dotnetCampus.Configurations.Core.FileConfigurationRepo.OnChanged(dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.AsynchronousConfigurationChangeContext context) -> void
+dotnetCampus.Configurations.Core.FileConfigurationRepo.SaveAsync(int tryCount = 10) -> System.Threading.Tasks.Task
+dotnetCampus.Configurations.Core.IConfigurationRepo
+dotnetCampus.Configurations.Core.IConfigurationRepo.CreateAppConfigurator() -> dotnetCampus.Configurations.IAppConfigurator
+dotnetCampus.Configurations.Core.IConfigurationRepo.GetValue(string key) -> string
+dotnetCampus.Configurations.Core.IConfigurationRepo.SetValue(string key, string value) -> void
+dotnetCampus.Configurations.Core.IConfigurationRepo.ClearValues(System.Predicate<string> keyFilter) -> void
+dotnetCampus.Configurations.Converters.ConfigurationExtensions
+static dotnetCampus.Configurations.Converters.ConfigurationExtensions.GetValue<T>(this dotnetCampus.Configurations.Configuration this, string key = null) -> T?
+static dotnetCampus.Configurations.Converters.ConfigurationExtensions.SetValue<T>(this dotnetCampus.Configurations.Configuration this, T? value, string key = null) -> void
+dotnetCampus.Threading.ContinuousPartOperation.Awaiter
+dotnetCampus.Threading.ContinuousPartOperation.Awaiter.IsCompleted.get -> bool
+dotnetCampus.Threading.ContinuousPartOperation.Awaiter.OnCompleted(System.Action continuation) -> void
+dotnetCampus.Threading.ContinuousPartOperation.Awaiter.GetResult() -> void
+dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.AsynchronousConfigurationChangeContext
+dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.AsynchronousConfigurationChangeContext.ChangedKeys.get -> System.Collections.Generic.IReadOnlyCollection<string>
+dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.AsynchronousConfigurationChangeContext.TrackAsyncAction(System.Threading.Tasks.Task action) -> void
+dotnetCampus.Configurations.Core.AsynchronousConfigurationRepo.AsynchronousConfigurationChangeContext.GetTrackedAction() -> System.Threading.Tasks.Task
