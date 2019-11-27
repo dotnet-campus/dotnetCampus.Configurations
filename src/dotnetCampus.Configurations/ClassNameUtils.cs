@@ -20,10 +20,14 @@ namespace dotnetCampus.Configurations
                 throw new ArgumentNullException(nameof(@this));
             }
 
-            var name = @this.GetType().Name;
-            var index = name.IndexOf(typeof(T).Name, StringComparison.InvariantCulture);
-            name = index >= 0 ? name.Substring(0, index) : name;
-            return name;
+            var derivedTypeName = @this.GetType().Name;
+            var baseTypeName = typeof(T).Name;
+            // 截取子类名称中去掉基类后缀的部分。
+            var name = derivedTypeName.EndsWith(baseTypeName, StringComparison.Ordinal)
+                ? derivedTypeName.Substring(0, derivedTypeName.Length - baseTypeName.Length)
+                : derivedTypeName;
+            // 如果子类名称和基类完全一样，则直接返回子类名称。
+            return string.IsNullOrWhiteSpace(name) ? derivedTypeName : name;
         }
     }
 }
