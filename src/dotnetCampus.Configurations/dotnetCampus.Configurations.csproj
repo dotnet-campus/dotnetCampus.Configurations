@@ -10,8 +10,8 @@
     <Authors>walterlv</Authors>
     <Company>dotnet-campus</Company>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/walterlv/dotnetCampus.Configurations</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/walterlv/dotnetCampus.Configurations.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/dotnet-campus/dotnetCampus.Configurations</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dotnet-campus/dotnetCampus.Configurations.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <Version>1.0.0</Version>
   </PropertyGroup>
@@ -19,7 +19,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.4" PrivateAssets="All" />
     <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="2.9.4" PrivateAssets="all" />
-    <PackageReference Include="dotnetCampus.SourceYard" Version="0.1.16539-alpha" PrivateAssets="all" />
+    <PackageReference Include="dotnetCampus.SourceYard" Version="0.1.17751-alpha" PrivateAssets="all" />
     <PackageReference Include="dotnetCampus.PublicAPI" Version="0.2.1-alpha" PrivateAssets="all" />
   </ItemGroup>
   
