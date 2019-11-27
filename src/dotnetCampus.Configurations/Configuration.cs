@@ -151,7 +151,7 @@ namespace dotnetCampus.Configurations
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         protected void SetValue(bool? value, [CallerMemberName] string? key = null)
-            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
+            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? "", key);
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
@@ -159,7 +159,7 @@ namespace dotnetCampus.Configurations
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         protected void SetValue(decimal? value, [CallerMemberName] string? key = null)
-            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
+            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? "", key);
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
@@ -167,7 +167,7 @@ namespace dotnetCampus.Configurations
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         protected void SetValue(double? value, [CallerMemberName] string? key = null)
-            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
+            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? "", key);
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
@@ -175,7 +175,7 @@ namespace dotnetCampus.Configurations
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         protected void SetValue(float? value, [CallerMemberName] string? key = null)
-            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
+            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? "", key);
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
@@ -183,7 +183,7 @@ namespace dotnetCampus.Configurations
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         protected void SetValue(int? value, [CallerMemberName] string? key = null)
-            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
+            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? "", key);
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
@@ -191,7 +191,7 @@ namespace dotnetCampus.Configurations
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         protected void SetValue(long? value, [CallerMemberName] string? key = null)
-            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty, key);
+            => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? "", key);
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
