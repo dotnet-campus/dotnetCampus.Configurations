@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -32,6 +33,8 @@ namespace dotnetCampus.Configurations.Core
         /// 初始化使用 <paramref name="fileName"/> 作为配置文件的 <see cref="FileConfigurationRepo"/> 的新实例。
         /// </summary>
         /// <param name="fileName">配置文件的文件路径。</param>
+        [Obsolete("请改用线程安全的 ConfigurationFactory 来创建实例。")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public FileConfigurationRepo(string fileName)
         {
             if (fileName == null) throw new ArgumentNullException(nameof(fileName));
