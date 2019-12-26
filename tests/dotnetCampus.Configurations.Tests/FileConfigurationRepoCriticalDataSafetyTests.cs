@@ -1,3 +1,4 @@
+using dotnetCampus.Configurations.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MSTest.Extensions.Contracts;
 
@@ -93,7 +94,14 @@ namespace dotnetCampus.Configurations.Tests
         {
             "两个进程竞争读写，1 进程写入后 2 进程立刻读，可以读到数据。".Test(() =>
             {
+                var config1 = new FileConfigurationRepo("exist.dcc").CreateAppConfigurator().Of<FakeConfiguration>();
+                var config2 = new FileConfigurationRepo("exist.dcc").CreateAppConfigurator().Of<FakeConfiguration>();
 
+                var value1 = "1";
+                config1.Key = value1;
+                var value2 = config2.Key;
+
+                Assert.AreEqual(value1, value2);
             });
 
             "两个进程竞争读写，1、2 进程分别写入后 1、2 进程立刻读，都可以读到数据。".Test(() =>
