@@ -124,7 +124,14 @@ namespace dotnetCampus.IO
             _watcher = null;
         }
 
-        private void FileOrDirectory_CreatedOrDeleted(object sender, FileSystemEventArgs e) => Watch();
+        private void FileOrDirectory_CreatedOrDeleted(object sender, FileSystemEventArgs e)
+        {
+            // 当文件创建或删除之后，需要重新设置监听方式。
+            Watch();
+
+            // 文件创建或删除也是文件内容改变的一种（0 字节变多或者文件内容变 0 字节），通知调用者文件内容已经发生改变。
+            OnChanged();
+        }
 
         private void FinalFile_Changed(object sender, FileSystemEventArgs e) => OnChanged();
 
