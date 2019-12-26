@@ -35,8 +35,8 @@ namespace dotnetCampus.Configurations
         /// <summary>
         /// 管理不同文件的 <see cref="DefaultConfiguration"/> 的实例。
         /// </summary>
-        private static ConcurrentDictionary<string, WeakReference<DefaultConfiguration>> _configurations
-            = new ConcurrentDictionary<string, WeakReference<DefaultConfiguration>>();
+        private static readonly ConcurrentDictionary<string, WeakReference<DefaultConfiguration>> Configurations
+            = new ConcurrentDictionary<string, WeakReference<DefaultConfiguration>>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// 从文件创建默认的配置管理器，你将可以使用类似字典的方式管理线程和进程安全的应用程序配置。
@@ -58,7 +58,7 @@ namespace dotnetCampus.Configurations
             }
 
             var path = Path.GetFullPath(fileName);
-            var reference = _configurations.GetOrAdd(path, CreateConfigurationReference);
+            var reference = Configurations.GetOrAdd(path, CreateConfigurationReference);
 
             // 以下两个 if 一个 lock 是类似于单例模式的创建方式，既保证性能又保证只创建一次。
             if (!reference.TryGetTarget(out var config))
@@ -78,7 +78,7 @@ namespace dotnetCampus.Configurations
 
         /// <summary>
         /// 创建 <see cref="DefaultConfiguration"/> 的弱引用实例。
-        /// 为了保证线程安全，此方法仅能被 <see cref="_configurations"/> 访问。
+        /// 为了保证线程安全，此方法仅能被 <see cref="Configurations"/> 访问。
         /// </summary>
         /// <param name="path">已经过验证的完整文件路径。</param>
         /// <returns><see cref="DefaultConfiguration"/> 的弱引用实例。</returns>
@@ -93,6 +93,6 @@ namespace dotnetCampus.Configurations
         /// <param name="path">已经过验证的完整文件路径。</param>
         /// <returns><see cref="DefaultConfiguration"/> 的新实例。</returns>
         private static DefaultConfiguration CreateConfiguration(string path)
-            => new FileConfigurationRepo(path).CreateAppConfigurator().Of<DefaultConfiguration>();
+            => ConfigurationFactory.FromFile(path).CreateAppConfigurator().Of<DefaultConfiguration>();
     }
 }
