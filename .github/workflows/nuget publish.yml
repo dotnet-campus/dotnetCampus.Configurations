@@ -17,7 +17,7 @@ jobs:
         dotnet-version: 3.1.100
     
     - name: Build with dotnet
-      run: dotnet pack --configuration Release
+      run: dotnet pack --configuration Release -v n
       shell: pwsh
  
     - name: Install Nuget
