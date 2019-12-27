@@ -46,12 +46,8 @@ namespace dotnetCampus.Configurations.Core
             // 监视文件改变。
             _watcher = new FileWatcher(_file);
             _watcher.Changed += OnFileChanged;
-#pragma warning disable 4014
-            _watcher.WatchAsync();
-#pragma warning restore 4014
-
-            // 反序列化。
-            LoadFromFileTask = Task.Run(async () => await DeserializeFile(_file).ConfigureAwait(false));
+            _ = _watcher.WatchAsync();
+            LoadFromFileTask = RequestReloadingFile();
         }
 
         /// <summary>
@@ -120,6 +116,20 @@ namespace dotnetCampus.Configurations.Core
         }
 
         /// <summary>
+        /// 尝试重新加载此配置文件的外部修改（例如使用其他编辑器或其他客户端修改的部分）。
+        /// <para>外部修改会自动同步到此配置中，但此同步不会立刻发生，所以如果你明确知道外部修改了文件后需要立刻重新加载外部修改，才需要调用此方法。</para>
+        /// </summary>
+        public async Task ReloadExternalChangesAsync()
+        {
+            // 如果之前正在读取文件，则等待文件读取完成。
+            await LoadFromFileTask.ConfigureAwait(false);
+            // 现在，强制要求重新读取文件。
+            LoadFromFileTask = RequestReloadingFile();
+            // 然后，等待重新读取完成。
+            await LoadFromFileTask.ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// 存储运行时保存的键值对。
         /// </summary>
         private ConcurrentDictionary<string, string> KeyValues { get; }
@@ -131,15 +141,31 @@ namespace dotnetCampus.Configurations.Core
         private Dictionary<string, string> OriginalKeyValues { get; set; }
             = new Dictionary<string, string>();
 
-        private Task LoadFromFileTask { get; }
-        private Task ReloadFromFileTask { get; set; } = Task.FromResult(0);
+        private Task LoadFromFileTask { get; set; }
+
         private readonly PartialAwaitableRetry _saveLoop;
         private readonly FileInfo _file;
         private bool _isPendingReread;
         private bool _isPendingRereadReentered;
+        private DateTimeOffset _lastDeserializeTime = DateTimeOffset.MinValue;
         private readonly FileWatcher _watcher;
         private static string _splitString = ">";
         private static string _escapeString = "?";
+
+        /// <summary>
+        /// 要求重新读取外部文件，以更新内存中的缓存。
+        /// 如果文件没有改变，则不会更新缓存。
+        /// </summary>
+        private Task RequestReloadingFile()
+        {
+            var lastWriteTime = new FileInfo(_file.FullName).LastWriteTimeUtc;
+            if (lastWriteTime == _lastDeserializeTime && LoadFromFileTask != null)
+            {
+                return Task.FromResult<object?>(null);
+            }
+            LoadFromFileTask = Task.Run(async () => await DeserializeFile(_file).ConfigureAwait(false));
+            return LoadFromFileTask;
+        }
 
         /// <summary>
         /// 在配置文件改变的时候，重新读取文件。
@@ -171,9 +197,10 @@ namespace dotnetCampus.Configurations.Core
                 await LoadFromFileTask.ConfigureAwait(false);
 
                 // 现在重新读取。
-                // - 重新读取文件时不影响对键值对的访问，所以不要求其他地方等待 LoadFromFileTask。
+                // - ~~重新读取文件时不影响对键值对的访问，所以不要求其他地方等待 LoadFromFileTask。~~
                 // - 但是，如果正在序列化和保存文件，为了避免写入时覆盖未读取完的键值对，需要等待读取完毕。
-                ReloadFromFileTask = Task.Run(async () => await DeserializeFile(_file).ConfigureAwait(false));
+                // ！特别注意！：外部写完文件后配置立刻读，读不到新值；需要调用 ReloadExternalChangesAsync 方法强制加载外部修改；否则将等待自动更新修改。
+                _ = RequestReloadingFile();
             }
             finally
             {
@@ -200,6 +227,8 @@ namespace dotnetCampus.Configurations.Core
 
             if (!File.Exists(file.FullName))
             {
+                UpdateMemoryValuesFromExternalValues(KeyValues, OriginalKeyValues, new Dictionary<string, string>());
+                OriginalKeyValues.Clear();
                 return;
             }
 
@@ -211,6 +240,7 @@ namespace dotnetCampus.Configurations.Core
                     // 一次性读取完的性能最好
                     var str = File.ReadAllText(file.FullName);
                     Deserialize(str);
+                    _lastDeserializeTime = DateTimeOffset.Now;
                     return;
                 }
                 catch (IOException)

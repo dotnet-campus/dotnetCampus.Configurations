@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace dotnetCampus.Configurations.Core
 {
@@ -73,5 +74,23 @@ namespace dotnetCampus.Configurations.Core
 #pragma warning disable CS0618 // 类型或成员已过时
             => new FileConfigurationRepo(path);
 #pragma warning restore CS0618 // 类型或成员已过时
+
+        /// <summary>
+        /// 尝试重新加载此配置文件的外部修改（例如使用其他编辑器或其他客户端修改的部分）。
+        /// <para>外部修改会自动同步到此配置中，但此同步不会立刻发生，所以如果你明确知道外部修改了文件后需要立刻重新加载外部修改，才需要调用此方法。</para>
+        /// </summary>
+        public static Task ReloadExternalChangesAsync(this IAppConfigurator configs)
+        {
+            if (configs is null)
+            {
+                throw new ArgumentNullException(nameof(configs));
+            }
+
+            if (configs.Of<DefaultConfiguration>().Repo is FileConfigurationRepo repo)
+            {
+                return repo.ReloadExternalChangesAsync();
+            }
+            return Task.FromResult<object?>(null);
+        }
     }
 }
