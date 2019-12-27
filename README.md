@@ -5,7 +5,7 @@
 
 |Build|NuGet|
 |--|--|
-|![](https://github.com/dotnet-campus/ddotnetCampus.Configurations/workflows/.NET%20Core/badge.svg)|[![](https://img.shields.io/nuget/v/dotnetCampus.Configurations.svg)](https://www.nuget.org/packages/dotnetCampus.Configurations)|
+|![](https://github.com/dotnet-campus/dotnetCampus.Configurations/workflows/.NET%20Core/badge.svg)|[![](https://img.shields.io/nuget/v/dotnetCampus.Configurations.svg)](https://www.nuget.org/packages/dotnetCampus.Configurations)|
 
 ## NuGet 安装
 
