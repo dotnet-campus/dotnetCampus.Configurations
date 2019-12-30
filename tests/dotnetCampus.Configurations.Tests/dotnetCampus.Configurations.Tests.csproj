@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net48;netcoreapp3.1</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="configs.dcc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 单元测试过程会修改生成的此文件，于是每次编译都应该将其复制到单元测试的目标目录，以便保证每次单元测试使用的是相同的文件。 -->
+    <Content Include="configs.dcc" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.2.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="2.0.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="2.0.0" />
+    <PackageReference Include="MSTestEnhancer" Version="1.6.0" />
+    <PackageReference Include="Moq" Version="4.13.1" />
+    <PackageReference Include="coverlet.collector" Version="1.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\dotnetCampus.Configurations\dotnetCampus.Configurations.csproj" />
+  </ItemGroup>
+
+  <Target Name="PrepareUnitTestTempFiles" AfterTargets="AfterBuild">
+    <!-- 每次编译完成之后，删除单元测试中生成的临时文件，避免单元测试某次跑不过导致影响了下一次单元测试。 -->
+    <Delete Files="$(OutputPath)configs.new.dcc" />
+    <!-- 单元测试过程会修改生成的此文件，于是每次编译都应该将其复制到单元测试的目标目录，以便保证每次单元测试使用的是相同的文件。 -->
+    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.01.dcc" />
+    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.02.dcc" />
+    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.03.dcc" />
+    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.04.dcc" />
+    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.05.dcc" />
+    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.06.dcc" />
+    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.07.dcc" />
+    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.08.dcc" />
+  </Target>
+
+</Project>
