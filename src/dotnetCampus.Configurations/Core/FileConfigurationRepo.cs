@@ -426,11 +426,10 @@ namespace dotnetCampus.Configurations.Core
                         var text = Serialize(KeyValues);
 
                         // 将所有的配置写入文件。
-#if NETCOREAPP
-                        await File.WriteAllTextAsync(_file.FullName, text, Encoding.UTF8).ConfigureAwait(false);
-#else
-                        File.WriteAllText(_file.FullName, text, Encoding.UTF8);
-#endif
+                        using (var stream = new StreamWriter(_file.FullName, false, Encoding.UTF8))
+                        {
+                            await stream.WriteAsync(text).ConfigureAwait(false);
+                        }
 
                         OriginalKeyValues = new Dictionary<string, string>(KeyValues);
                     }
