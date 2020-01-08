@@ -426,9 +426,8 @@ namespace dotnetCampus.Configurations.Core
                         var text = Serialize(KeyValues);
 
                         // 将所有的配置写入文件。 
-                        using (var fileStream = File.OpenWrite(_file.FullName))
+                        using (var fileStream = File.Open(_file.FullName, FileMode.Create, FileAccess.Write))
                         {
-                            fileStream.SetLength(0);
                             using var stream = new StreamWriter(fileStream, Encoding.UTF8);
                             await stream.WriteAsync(text).ConfigureAwait(false);
                         }
