@@ -422,18 +422,14 @@ namespace dotnetCampus.Configurations.Core
                             await _watcher.StopAsync().ConfigureAwait(false);
                         }
 
-                        // 如果原来的文件存在，则将原来的文件删除。
-                        if (File.Exists(_file.FullName))
-                        {
-                            _file.Delete();
-                        }
-
                         // 在每次尝试写入到文件之前都将内存中的键值对序列化一次，避免过多的等待导致写入的数据过旧。
                         var text = Serialize(KeyValues);
 
-                        // 将所有的配置写入文件。
-                        using (var stream = new StreamWriter(_file.FullName, false, Encoding.UTF8))
+                        // 将所有的配置写入文件。 
+                        using (var fileStream = File.OpenWrite(_file.FullName))
                         {
+                            fileStream.SetLength(0);
+                            using var stream = new StreamWriter(fileStream, Encoding.UTF8);
                             await stream.WriteAsync(text).ConfigureAwait(false);
                         }
 
