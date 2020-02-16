@@ -43,13 +43,6 @@ namespace dotnetCampus.Configurations
             return configurationValue?.ToString() ?? string.Empty;
         }
 
-        public static implicit operator ConfigurationString?(bool? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
-        public static implicit operator ConfigurationString?(decimal? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
-        public static implicit operator ConfigurationString?(double? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
-        public static implicit operator ConfigurationString?(float? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
-        public static implicit operator ConfigurationString?(int? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
-        public static implicit operator ConfigurationString?(long? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
-
         /// <summary>
         /// 转换为非 null 字符串。如果原始值为 null，将得到 <see cref="string.Empty"/>。<para />
         /// 注意：<para />
