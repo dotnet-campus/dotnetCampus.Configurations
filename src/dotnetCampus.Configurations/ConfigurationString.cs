@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Runtime.InteropServices;
 
 #pragma warning disable CA2225
@@ -28,8 +29,10 @@ namespace dotnetCampus.Configurations
         /// <param name="value"></param>
         public static implicit operator ConfigurationString?(string? value)
         {
-            return value == null || string.IsNullOrEmpty(value) ? (ConfigurationString?)null : new ConfigurationString(value);
+            return Convert(value);
         }
+
+        private static ConfigurationString? Convert(string? value)=> value == null || string.IsNullOrEmpty(value) ? (ConfigurationString?)null : new ConfigurationString(value);
 
         /// <summary>
         /// 调用 <see cref="ToString"/> 方法以便将 <see cref="ConfigurationString"/> 转换为非 null 字符串。
