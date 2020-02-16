@@ -20,7 +20,8 @@ namespace dotnetCampus.Configurations.Tests
                 defaultConfiguration["key"] = true;
 
                 // Assert
-                Assert.AreEqual(true.ToString(CultureInfo.InvariantCulture), defaultConfiguration["key"]);
+                Assert.AreEqual(true, defaultConfiguration["key"] != null);
+                Assert.AreEqual(true.ToString(CultureInfo.InvariantCulture), defaultConfiguration["key"].ToString());
             });
         }
     }
