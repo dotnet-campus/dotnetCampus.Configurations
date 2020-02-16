@@ -13,7 +13,7 @@
     <PackageProjectUrl>https://github.com/dotnet-campus/dotnetCampus.Configurations</PackageProjectUrl>
     <RepositoryUrl>https://github.com/dotnet-campus/dotnetCampus.Configurations.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <Version>1.1.3</Version>
+    <Version>1.1.5</Version>
   </PropertyGroup>
 
   <ItemGroup>

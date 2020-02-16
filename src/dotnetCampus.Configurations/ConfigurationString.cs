@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Runtime.InteropServices;
 
 #pragma warning disable CA2225
@@ -28,8 +29,10 @@ namespace dotnetCampus.Configurations
         /// <param name="value"></param>
         public static implicit operator ConfigurationString?(string? value)
         {
-            return value == null || string.IsNullOrEmpty(value) ? (ConfigurationString?)null : new ConfigurationString(value);
+            return Convert(value);
         }
+
+        private static ConfigurationString? Convert(string? value)=> value == null || string.IsNullOrEmpty(value) ? (ConfigurationString?)null : new ConfigurationString(value);
 
         /// <summary>
         /// 调用 <see cref="ToString"/> 方法以便将 <see cref="ConfigurationString"/> 转换为非 null 字符串。
@@ -39,6 +42,13 @@ namespace dotnetCampus.Configurations
         {
             return configurationValue?.ToString() ?? string.Empty;
         }
+
+        public static implicit operator ConfigurationString?(bool? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
+        public static implicit operator ConfigurationString?(decimal? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
+        public static implicit operator ConfigurationString?(double? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
+        public static implicit operator ConfigurationString?(float? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
+        public static implicit operator ConfigurationString?(int? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
+        public static implicit operator ConfigurationString?(long? value) => Convert(value?.ToString(CultureInfo.InvariantCulture));
 
         /// <summary>
         /// 转换为非 null 字符串。如果原始值为 null，将得到 <see cref="string.Empty"/>。<para />
