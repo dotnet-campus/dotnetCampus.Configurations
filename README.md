@@ -1,11 +1,29 @@
-# dotnetCampus.Configurations
+# COIN 硬币配置文件
 
-高性能配置文件
+COIN = Configuration\n，即“配置+换行符”，因默认使用“\n”作为换行符而第得名。COIN 设计了一个高性能的应用程序配置文件，以及实现高性能读写这个配置文件的 .NET 库。
 
+原名为：dotnetCampus.Configurations，这也是此库中命名空间的前缀。
 
 |Build|NuGet|
 |--|--|
 |![](https://github.com/dotnet-campus/dotnetCampus.Configurations/workflows/.NET%20Core/badge.svg)|[![](https://img.shields.io/nuget/v/dotnetCampus.Configurations.svg)](https://www.nuget.org/packages/dotnetCampus.Configurations)|
+
+## 配置文件存储格式
+
+配置文件以行为单位，将行首是 `>` 字符的行作为注释，在 `>` 后面的内容将会被忽略。在第一个非 `>` 字符开头的行作为 `Key` 值，在此行以下直到文件结束或下一个 `>` 字符开始的行之间内容作为 `Value` 值
+
+```
+> 配置文件
+> 版本 1.0
+State.BuildLogFile
+xxxxx
+> 注释内容
+Foo
+这是第一行
+这是第二行
+>
+> 配置文件结束
+```
 
 ## NuGet 安装
 
@@ -161,21 +179,3 @@ public void Update()
         - 引用类型仅提供字符串，返回 `Nullable<ConfigurationString>` 类型，这也是一个结构体，你可以判断 `null`，但实际上不可能为 `null`。
 1. 全应用程序统一的 API
     - 在大型应用中开放 API 时记得使用 `CreateAppConfigurator()` 来开放，这会让整个应用程序使用统一的一套配置读写 API，且完全的 IO 无感知。
-
-## 配置文件存储格式
-
-配置文件以行为单位，将行首是 `>` 字符的行作为注释，在 `>` 后面的内容将会被忽略。在第一个非 `>` 字符开头的行作为 `Key` 值，在此行以下直到文件结束或下一个 `>` 字符开始的行之间内容作为 `Value` 值
-
-```
-> 配置文件
-> 版本 1.0
-State.BuildLogFile
-xxxxx
-> 注释内容
-Foo
-这是第一行
-这是第二行
->
-> 配置文件结束
-```
-
