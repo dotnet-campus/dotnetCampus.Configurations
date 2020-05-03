@@ -149,8 +149,6 @@ namespace dotnetCampus.Configurations.Core
         private bool _isPendingRereadReentered;
         private DateTimeOffset _lastDeserializeTime = DateTimeOffset.MinValue;
         private readonly FileWatcher _watcher;
-        private static string _splitString = ">";
-        private static string _escapeString = "?";
 
         /// <summary>
         /// 要求重新读取外部文件，以更新内存中的缓存。
