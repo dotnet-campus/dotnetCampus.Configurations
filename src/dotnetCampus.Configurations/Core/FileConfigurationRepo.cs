@@ -149,8 +149,6 @@ namespace dotnetCampus.Configurations.Core
         private bool _isPendingRereadReentered;
         private DateTimeOffset _lastDeserializeTime = DateTimeOffset.MinValue;
         private readonly FileWatcher _watcher;
-        private static string _splitString = ">";
-        private static string _escapeString = "?";
 
         /// <summary>
         /// 要求重新读取外部文件，以更新内存中的缓存。
@@ -269,50 +267,7 @@ namespace dotnetCampus.Configurations.Core
         /// <param name="str"></param>
         private void Deserialize(string str)
         {
-            var keyValuePairList = str.Split('\n');
-            var keyValue = new Dictionary<string, string>(StringComparer.Ordinal);
-            string? key = null;
-            var splitString = _splitString;
-
-            foreach (var temp in keyValuePairList.Select(temp => temp.Trim()))
-            {
-                if (temp.StartsWith(splitString, StringComparison.Ordinal))
-                {
-                    // 分割，可以作为注释，这一行忽略
-                    // 下一行必须是key
-                    key = null;
-                    continue;
-                }
-
-                var unescapedString = UnescapeString(temp);
-
-                if (key == null)
-                {
-                    key = unescapedString;
-                    
-                    // 文件存在多个地方都记录相同的值
-                    // 如果有多个地方记录相同的值，使用最后的值替换前面文件
-                    if (keyValue.ContainsKey(key))
-                    {
-                        keyValue.Remove(key);
-                    }
-                }
-                else
-                {
-                    if (keyValue.ContainsKey(key))
-                    {
-                        // key
-                        // v1
-                        // v2
-                        // 返回 {"key","v1\nv2"}
-                        keyValue[key] = keyValue[key] + "\n" + unescapedString;
-                    }
-                    else
-                    {
-                        keyValue.Add(key, unescapedString);
-                    }
-                }
-            }
+            var keyValue = CoinConfigurationSerializer.Deserialize(str);
 
             UpdateMemoryValuesFromExternalValues(KeyValues, OriginalKeyValues, keyValue);
 
@@ -423,7 +378,7 @@ namespace dotnetCampus.Configurations.Core
                         }
 
                         // 在每次尝试写入到文件之前都将内存中的键值对序列化一次，避免过多的等待导致写入的数据过旧。
-                        var text = Serialize(KeyValues);
+                        var text = CoinConfigurationSerializer.Serialize(KeyValues);
 
                         // 将所有的配置写入文件。 
                         using (var fileStream = File.Open(_file.FullName, FileMode.Create, FileAccess.Write))
@@ -462,76 +417,6 @@ namespace dotnetCampus.Configurations.Core
             {
                 ExceptionDispatchInfo.Capture(exception).Throw();
             }
-        }
-
-        /// <summary>
-        /// 将键值对字典序列化为文本字符串。
-        /// </summary>
-        /// <param name="keyValue">要序列化的键值对字典。</param>
-        /// <returns>序列化后的文本字符串。</returns>
-        private static string Serialize(ConcurrentDictionary<string, string> keyValue)
-        {
-            var keyValuePairList = keyValue.ToArray().OrderBy(p => p.Key);
-
-            var str = new StringBuilder();
-            str.Append("> 配置文件\n");
-            str.Append("> 版本 1.0\n");
-
-            foreach (var temp in keyValuePairList)
-            {
-                // str.AppendLine 在一些地区使用的是 \r\n 所以不符合反序列化
-
-                str.Append(EscapeString(temp.Key));
-                str.Append("\n");
-                str.Append(EscapeString(temp.Value));
-                str.Append("\n>\n");
-            }
-
-            str.Append("> 配置文件结束");
-            return str.ToString();
-        }
-
-        /// <summary>
-        /// 存储的转义
-        /// </summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
-        private static string EscapeString(string str)
-        {
-            // 如果开头是 `>` 就需要转换为 `?>`
-            // 开头是 `?` 转换为 `??`
-
-            var splitString = _splitString;
-            var escapeString = _escapeString;
-
-            if (str.StartsWith(splitString, StringComparison.Ordinal))
-            {
-                return _escapeString + str;
-            }
-
-            if (str.StartsWith(escapeString, StringComparison.Ordinal))
-            {
-                return _escapeString + str;
-            }
-
-            return str;
-        }
-
-        /// <summary>
-        /// 存储的反转义
-        /// </summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
-        private static string UnescapeString(string str)
-        {
-            var escapeString = _escapeString;
-
-            if (str.StartsWith(escapeString, StringComparison.Ordinal))
-            {
-                return str.Substring(1);
-            }
-
-            return str;
         }
     }
 }
