@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <WarningsAsErrors>$(WarningsAsErrors);CS8600;CS8601;CS8602;CS8603;CS8604;CS8609;CS8610;CS8616;CS8618;CS8619;CS8622;CS8625</WarningsAsErrors>
     <RootNamespace>dotnetCampus.Configurations</RootNamespace>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <Authors>walterlv</Authors>
     <Company>dotnet-campus</Company>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
