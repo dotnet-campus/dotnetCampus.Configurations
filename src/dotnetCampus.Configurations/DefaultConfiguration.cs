@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Concurrent;
 using System.IO;
 using dotnetCampus.Configurations.Core;

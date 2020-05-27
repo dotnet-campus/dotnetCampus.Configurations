@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Runtime.InteropServices;
 
 #pragma warning disable CA2225 // Operator overloads have named alternates
