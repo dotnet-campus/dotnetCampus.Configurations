@@ -1,4 +1,5 @@
 <Project>
+  <Import Project="build\Version.props" />
   <PropertyGroup>
     <PackageOutputPath>$(MSBuildThisFileDirectory)bin\$(Configuration)</PackageOutputPath>
   </PropertyGroup>
