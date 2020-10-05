@@ -1,6 +1,6 @@
 # COIN 硬币配置文件
 
-COIN = Configuration\n，即“配置+换行符”，因默认使用“\n”作为换行符而第得名。COIN 设计了一个高性能的应用程序配置文件，以及实现高性能读写这个配置文件的 .NET 库。
+COIN = Configuration\n，即“配置+换行符”，因默认使用“\n”作为换行符而得名。COIN 设计了一个高性能的应用程序配置文件，以及实现高性能读写这个配置文件的 .NET 库。
 
 原名为：dotnetCampus.Configurations，这也是此库中命名空间的前缀。
 
