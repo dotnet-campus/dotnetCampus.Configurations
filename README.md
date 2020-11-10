@@ -37,8 +37,8 @@ dotnet add package dotnetCampus.Configurations
 
 ```csharp
 // 使用一个文件路径创建默认配置的实例。文件可以存在也可以不存在，甚至其所在的文件夹也可以不需要提前存在。
-// 这里的 fkv 是 Fast Key-Value 的简称。你也可以使用其他扩展名，因为它实际上只是 UTF-8 编码的纯文本而已。
-var configs = DefaultConfiguration.FromFile(@"C:\Users\lvyi\Desktop\walterlv.fkv");
+// 这里的配置文件后缀名 coin 是 Configuration\n，即 “配置+换行符” 的简称。你也可以使用其他扩展名，因为它实际上只是 UTF-8 编码的纯文本而已。
+var configs = DefaultConfiguration.FromFile(@"C:\Users\lvyi\Desktop\walterlv.coin");
 ```
 
 获取值：
@@ -74,7 +74,7 @@ configs["Foo"] = "";
 ```csharp
 // 这里是大型项目配置初始化处的代码。
 // 此类型中包含底层的配置读写方法，而且所有读写全部是异步的，防止影响启动性能。
-var configFileName = @"C:\Users\lvyi\Desktop\walterlv.fkv";
+var configFileName = @"C:\Users\lvyi\Desktop\walterlv.coin";
 var config = new FileConfigurationRepo(configFileName);
 
 // 如果你需要对整个应用程序公开配置，那么可以公开 CreateAppConfigurator 方法返回的新实例。
