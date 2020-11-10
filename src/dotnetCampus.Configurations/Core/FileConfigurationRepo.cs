@@ -328,7 +328,7 @@ namespace dotnetCampus.Configurations.Core
         }
 
         /// <summary>
-        /// <para/> ```fkv
+        /// <para/> ```coin
         /// <para/> > 凡是 “>” 开头的行都是分隔符，如果后面有内容，将被忽略。
         /// <para/> > 于是这就可以写注释用以说明其含义
         /// <para/> > 多行的注释只需要打多行 “>” 即可
