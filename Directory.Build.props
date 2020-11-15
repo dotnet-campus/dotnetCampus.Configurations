@@ -1,6 +1,17 @@
 <Project>
   <Import Project="build\Version.props" />
+
   <PropertyGroup>
     <PackageOutputPath>$(MSBuildThisFileDirectory)bin\$(Configuration)</PackageOutputPath>
+      <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+      <Authors>walterlv</Authors>
+      <Company>dotnet-campus</Company>
+      <PackageLicenseExpression>MIT</PackageLicenseExpression>
+      <PackageProjectUrl>https://github.com/dotnet-campus/dotnetCampus.Configurations</PackageProjectUrl>
+      <RepositoryUrl>https://github.com/dotnet-campus/dotnetCampus.Configurations.git</RepositoryUrl>
+      <RepositoryType>git</RepositoryType>
+      <GenerateDocumentationFile>true</GenerateDocumentationFile>
+      <LangVersion>latest</LangVersion>
+      <Nullable>enable</Nullable>
   </PropertyGroup>
 </Project>
