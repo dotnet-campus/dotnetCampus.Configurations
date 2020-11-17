@@ -2,8 +2,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
+
+using dotnetCampus.Configurations.Utils;
 
 namespace dotnetCampus.Configurations.Concurrent
 {
@@ -14,6 +18,8 @@ namespace dotnetCampus.Configurations.Concurrent
     {
         private readonly ConcurrentDictionary<TKey, ProcessSafeValueEntry<TValue>> _keyValues = new ConcurrentDictionary<TKey, ProcessSafeValueEntry<TValue>>();
 
+        public ICollection<TKey> Keys => _keyValues.Keys;
+
         public TValue this[TKey key]
         {
             get => _keyValues.TryGetValue(key, out var entry) ? entry.Value : default;
@@ -21,6 +27,30 @@ namespace dotnetCampus.Configurations.Concurrent
                 key,
                 _ => CreateInternalValue(value),
                 (_, existed) => CreateInternalValue(value, existed));
+        }
+
+        /// <summary>
+        /// 要求从外部存储中更新所有值。因为存在进程锁，所以此方法可能会耗时。
+        /// </summary>
+        /// <param name="file">指定一个文件路径。不同进程间指定相同文件时，从外部源更新键值则是进程安全的。</param>
+        /// <param name="duringCriticalReadWriteContext">
+        /// 进程安全的代码块，请在此代码块中从外部源读取键值集合，
+        /// 调用 <see cref="ICriticalReadWriteContext{TKey, TValue}.MergeExternalKeyValues(IReadOnlyDictionary{TKey, TValue}, DateTimeOffset?)"/>，
+        /// 然后将返回的已合并键值集合写回外部源。
+        /// </param>
+        public void UpdateValuesFromExternal(FileInfo file,
+            Action<ICriticalReadWriteContext<TKey, TValue>> duringCriticalReadWriteContext)
+        {
+            var path = Path.GetFullPath(file.FullName);
+            var name = OSUtils.IsPathCaseSensitive() ? path : path.ToUpperInvariant();
+            var comparison = OSUtils.IsPathCaseSensitive() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+#if NETFRAMEWORK || NETSTANDARD
+            name = name.Replace("/", "_").Replace("\\", "_");
+#else
+            name = name.Replace("/", "_", comparison).Replace("\\", "_", comparison);
+#endif
+
+            UpdateValuesFromExternal(name, duringCriticalReadWriteContext);
         }
 
         /// <summary>
@@ -45,23 +75,8 @@ namespace dotnetCampus.Configurations.Concurrent
                 // 发现被遗弃的锁（其他已退出进程）。已获取到，并可用。
             }
 
-            var context = new CriticalReadWriteContext<TKey, TValue>(
-                (keyValues, updateTime) => UpdateValuesFromExternalCore(keyValues, updateTime));
+            var context = new CriticalReadWriteContext<TKey, TValue>(UpdateValuesFromExternalCore);
             duringCriticalReadWriteContext(context);
-        }
-
-        private IReadOnlyDictionary<TKey, TValue> UpdateValuesFromExternalCore(
-            IReadOnlyDictionary<TKey, TValue> externalKeyValues,
-            DateTimeOffset externalUpdateTime)
-        {
-            // 以下代码块虽然没有加锁，但可以确保所有外部键值消耗完成后的瞬时状态是那个时刻的最终状态。
-            foreach (var external in externalKeyValues)
-            {
-                _keyValues.AddOrUpdate(external.Key,
-                    _ => CreateExternalValue(external.Value, externalUpdateTime),
-                    (_, existed) => CreateExternalValue(external.Value, existed, externalUpdateTime));
-            }
-            return _keyValues.ToDictionary(x => x.Key, x => x.Value.Value);
         }
 
         /// <summary>
@@ -70,6 +85,55 @@ namespace dotnetCampus.Configurations.Concurrent
         /// <param name="key">要查找的键。</param>
         /// <returns>如果存在就返回 true，否则返回 false。</returns>
         public bool ContainsKey(TKey key) => _keyValues.ContainsKey(key);
+
+        public bool TryGetValue(TKey key, out TValue value)
+        {
+            if (_keyValues.TryGetValue(key, out var entry))
+            {
+                value = entry.Value;
+                return true;
+            }
+            else
+            {
+                value = default;
+                return false;
+            }
+        }
+
+        public bool TryRemove(TKey key, out TValue value)
+        {
+            if (_keyValues.TryRemove(key, out var entry))
+            {
+                value = entry.Value;
+                return true;
+            }
+            else
+            {
+                value = default;
+                return false;
+            }
+        }
+
+        private IReadOnlyDictionary<TKey, TValue> UpdateValuesFromExternalCore(
+            IReadOnlyDictionary<TKey, TValue> externalKeyValues,
+            DateTimeOffset externalUpdateTime)
+        {
+            // 以下代码块虽然没有加锁，但可以确保所有外部键值消耗完成后的瞬时状态是那个时刻的最终状态。
+            var exceptedKeys = _keyValues.Keys.Except(externalKeyValues.Keys);
+            foreach (var external in externalKeyValues)
+            {
+                _keyValues.AddOrUpdate(external.Key,
+                    _ => CreateExternalValue(external.Value, externalUpdateTime),
+                    (_, existed) => CreateExternalValue(external.Value, existed, externalUpdateTime));
+            }
+            foreach (var key in exceptedKeys)
+            {
+                _keyValues.AddOrUpdate(key,
+                    _ => CreateDeletedValue(DateTimeOffset.UtcNow),
+                    (_, existed) => CreateDeletedValue(DateTimeOffset.UtcNow));
+            }
+            return _keyValues.Where(x => x.Value.State != ProcessSafeValueState.Deleted).ToDictionary(x => x.Key, x => x.Value.Value);
+        }
 
         /// <summary>
         /// 创建一个由内部值新建的 <see cref="ProcessSafeValueEntry{TValue}"/>。
@@ -144,5 +208,17 @@ namespace dotnetCampus.Configurations.Concurrent
                     ProcessSafeValueState.NotChanged);
             }
         }
+
+        /// <summary>
+        /// 创建一个已删除的 <see cref="ProcessSafeValueEntry{TValue}"/>。
+        /// </summary>
+        /// <param name="deletedTime">已知的最近删除时间。</param>
+        /// <returns>进程安全的值。</returns>
+        private static ProcessSafeValueEntry<TValue> CreateDeletedValue(DateTimeOffset deletedTime)
+            => new ProcessSafeValueEntry<TValue>(
+                default,
+                default,
+                deletedTime,
+                ProcessSafeValueState.Deleted);
     }
 }

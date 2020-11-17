@@ -1,15 +1,18 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+
+using dotnetCampus.Configurations.Concurrent;
+using dotnetCampus.Configurations.Utils;
 using dotnetCampus.IO;
 using dotnetCampus.Threading;
+
 using CT = dotnetCampus.Configurations.Core.ConfigTracer;
 
 namespace dotnetCampus.Configurations.Core
@@ -65,7 +68,7 @@ namespace dotnetCampus.Configurations.Core
         protected override async Task<string?> ReadValueCoreAsync(string key)
         {
             await LoadFromFileTask.ConfigureAwait(false);
-            var value = KeyValues.TryGetValue(key, out var v) ? v : null;
+            var value = KeyValues.TryGetValue(key, out var v) ? v.Value : null;
             CT.Debug($"{key} = {value ?? "null"}", "Get");
             return value;
         }
@@ -81,7 +84,7 @@ namespace dotnetCampus.Configurations.Core
             value = value.Replace(Environment.NewLine, "\n");
             await LoadFromFileTask.ConfigureAwait(false);
             CT.Debug($"{key} = {value}", "Set");
-            KeyValues[key] = value;
+            KeyValues[key] = new CommentedValue<string>(value);
         }
 
         /// <summary>
@@ -132,14 +135,8 @@ namespace dotnetCampus.Configurations.Core
         /// <summary>
         /// 存储运行时保存的键值对。
         /// </summary>
-        private ConcurrentDictionary<string, string> KeyValues { get; }
-            = new ConcurrentDictionary<string, string>();
-
-        /// <summary>
-        /// 保存刚刚反序列化文件后的键值对备份。这份备份用于比较外部程序对配置文件的修改差量。
-        /// </summary>
-        private Dictionary<string, string> OriginalKeyValues { get; set; }
-            = new Dictionary<string, string>();
+        private ProcessConcurrentDictionary<string, CommentedValue<string>> KeyValues { get; }
+            = new ProcessConcurrentDictionary<string, CommentedValue<string>>();
 
         private Task LoadFromFileTask { get; set; }
 
@@ -161,7 +158,7 @@ namespace dotnetCampus.Configurations.Core
             {
                 return Task.FromResult<object?>(null);
             }
-            LoadFromFileTask = Task.Run(async () => await DeserializeFile(_file).ConfigureAwait(false));
+            LoadFromFileTask = Task.Run(async () => await Synchronize().ConfigureAwait(false));
             return LoadFromFileTask;
         }
 
@@ -210,213 +207,80 @@ namespace dotnetCampus.Configurations.Core
         {
             context.StepCount = 10;
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
-            await Serialize().ConfigureAwait(false);
+            await Synchronize().ConfigureAwait(false);
             return true;
         }
 
         /// <summary>
-        /// 反序列化文件
+        /// 将文件与内存模型进行同步。
         /// </summary>
-        /// <param name="file"></param>
-        /// <returns></returns>
-        private async Task DeserializeFile(FileInfo file)
+        /// <returns>可异步等待的对象。</returns>
+        private Task Synchronize()
         {
-            CT.Debug($"读取 {file.FullName}", "File");
-
-            if (!File.Exists(file.FullName))
+            KeyValues.UpdateValuesFromExternal(_file, context =>
             {
-                UpdateMemoryValuesFromExternalValues(KeyValues, OriginalKeyValues, new Dictionary<string, string>());
-                OriginalKeyValues.Clear();
-                return;
-            }
-
-            const int retryCount = 100;
-            for (var i = 0; i < retryCount; i++)
-            {
-                try
+                // 此处代码是跨进程安全的。
+                var random = new Random();
+                for (var i = 0; i < 4; i++)
                 {
-                    // 一次性读取完的性能最好
-                    var str = File.ReadAllText(file.FullName);
-                    Deserialize(str);
-                    _lastDeserializeTime = DateTimeOffset.Now;
-                    return;
-                }
-                catch (IOException)
-                {
-                    const int waitTime = 10;
-                    // 读取配置文件出现异常，忽略所有异常
-                    await Task.Delay(waitTime).ConfigureAwait(false);
-                    // 通过测试发现在我的设备，写入平均时间是 6 毫秒，也就是如果存在多实例写入，也不会是 waitTime*retryCount 毫秒这么久，等待 waitTime*retryCount 毫秒也是可以接受最大的值
-                }
-#pragma warning disable CA1031 // Do not catch general exception types
-                catch
-#pragma warning restore CA1031 // Do not catch general exception types
-                {
-                    // 这里的代码因为从一个 IO 线程调进来，所以当调用方使用 await 等待，会使得这里抛出的异常回到 IO 线程，导致应用程序崩溃。
-                    // 这里可能的异常有：
-                    //   - UnauthorizedAccessException 在文件只读、文件实际上是一个文件夹、没有读权限或者平台不支持时引发。
-                    const int waitTime = 10;
-                    await Task.Delay(waitTime).ConfigureAwait(false);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 反序列化的核心实现，反序列化字符串
-        /// </summary>
-        /// <param name="str"></param>
-        private void Deserialize(string str)
-        {
-            var keyValue = CoinConfigurationSerializer.Deserialize(str);
-
-            UpdateMemoryValuesFromExternalValues(KeyValues, OriginalKeyValues, keyValue);
-
-            OriginalKeyValues = keyValue;
-        }
-
-        /// <summary>
-        /// 通过比较曾经读取过的文件键值对和当前读取的文件键值对比较差异，再根据差异修改内存中的键值对。
-        /// 目前无法有效地比较新旧，于是这个差异几乎是决定性地影响到当前内存中的键值对。
-        /// </summary>
-        /// <param name="memoryKeyValues"></param>
-        /// <param name="originalKeyValues"></param>
-        /// <param name="externalKeyValues"></param>
-        private static void UpdateMemoryValuesFromExternalValues(
-            ConcurrentDictionary<string, string> memoryKeyValues,
-            Dictionary<string, string> originalKeyValues,
-            Dictionary<string, string> externalKeyValues)
-        {
-            var toBeAdded = new Dictionary<string, string>();
-            var toBeRemoved = new Dictionary<string, string>();
-            var toBeModified = new Dictionary<string, string>();
-
-            foreach (var externalPair in externalKeyValues)
-            {
-                if (originalKeyValues.TryGetValue(externalPair.Key, out var originalValue))
-                {
-                    if (externalPair.Value != originalValue)
-                    {
-                        toBeModified[externalPair.Key] = externalPair.Value;
-                    }
-                }
-                else
-                {
-                    toBeAdded[externalPair.Key] = externalPair.Value;
-                }
-            }
-
-            foreach (var pair in originalKeyValues)
-            {
-                if (!externalKeyValues.ContainsKey(pair.Key))
-                {
-                    toBeRemoved[pair.Key] = pair.Value;
-                }
-            }
-
-            // 以上代码是线程安全的。
-            // 以下代码可能会因为多线程的问题导致数据不一致，但不会出现错误/异常。
-
-            foreach (var pair in toBeAdded.Concat(toBeModified))
-            {
-                memoryKeyValues.AddOrUpdate(pair.Key, pair.Value, (key, existedValue) => pair.Value);
-            }
-
-            foreach (var pair in toBeRemoved)
-            {
-                memoryKeyValues.TryRemove(pair.Key, out _);
-            }
-        }
-
-        /// <summary>
-        /// <para/> ```coin
-        /// <para/> > 凡是 “>” 开头的行都是分隔符，如果后面有内容，将被忽略。
-        /// <para/> > 于是这就可以写注释用以说明其含义
-        /// <para/> > 多行的注释只需要打多行 “>” 即可
-        /// <para/> key0
-        /// <para/> value0
-        /// <para/> >
-        /// <para/> key1
-        /// <para/> ?>value1
-        /// <para/> ??value1
-        /// <para/> > key 一定只有一行，在遇到下一个 “>” 之前，都是 value
-        /// <para/> > key/value 存储时，每行一定不会 “>” 开头，如果遇到，则转义为 “?>”，原来的 “?” 转义为 “??”
-        /// <para/> > 转义仅发生在行首。
-        /// <para/> > 遇到空行，则依然识别为 key，或者 value 的一部分
-        /// <para/> 
-        /// <para/> value
-        /// <para/> 
-        /// <para/> > 以上 key 为空字符串，value 为 包含空行的 value（一般禁止写入空字符串作为 key）
-        /// <para/> > 配置文件末尾不包含空行（因为这会识别为 value 的一部分）
-        /// <para/> key0
-        /// <para/> value9
-        /// <para/> > 如果存在相同的 key，则处于文件后面的会覆盖文件前面的值。
-        /// <para/> ```
-        /// </summary>
-        /// <returns></returns>
-        private async Task Serialize()
-        {
-            // 重写尝试 10 次
-            Exception? exception = null;
-            const int retryWriteCount = 10;
-
-            for (var i = 0; i < retryWriteCount; i++)
-            {
-                try
-                {
-                    // 如果文件夹不存在，则创建一个新的。
-                    var directory = _file.Directory;
-                    if (directory != null && !Directory.Exists(directory.FullName))
-                    {
-                        directory.Create();
-                    }
-
                     try
                     {
-                        if (_watcher != null)
-                        {
-                            await _watcher.StopAsync().ConfigureAwait(false);
-                        }
-
-                        // 在每次尝试写入到文件之前都将内存中的键值对序列化一次，避免过多的等待导致写入的数据过旧。
-                        var text = CoinConfigurationSerializer.Serialize(KeyValues);
-
-                        // 将所有的配置写入文件。 
-                        using (var fileStream = File.Open(_file.FullName, FileMode.Create, FileAccess.Write))
-                        {
-                            using var stream = new StreamWriter(fileStream, Encoding.UTF8);
-                            await stream.WriteAsync(text).ConfigureAwait(false);
-                        }
-
-                        OriginalKeyValues = new Dictionary<string, string>(KeyValues);
+                        SynchronizeCore(context);
+                        return;
                     }
-                    finally
+                    catch (IOException)
                     {
-                        if (_watcher != null)
-                        {
-                            await _watcher.WatchAsync().ConfigureAwait(false);
-                        }
+                        // 可能存在某些旧版本的代码通过非进程安全的方式读写文件。
+                        var waitMilliseconds = random.Next(50, 150);
+                        Thread.Sleep(waitMilliseconds);
                     }
-
-                    return;
                 }
-#pragma warning disable CA1031 // Do not catch general exception types
-                catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
-                {
-                    // 如果这里吞掉了所有的异常，那么将没有任何途径可以得知为什么存储会失败。
-                    exception = exception ?? ex;
-                    Trace.WriteLine(exception);
-                }
+            });
+#if NETFRAMEWORK
+            return Task.FromResult(0);
+#else
+            return Task.CompletedTask;
+#endif
+        }
 
-                // 在每次失败重试的时候，都需要等待指定的保存延迟时间。
-                await Task.Delay(DelaySaveTime).ConfigureAwait(false);
-            }
+        private void SynchronizeCore(ICriticalReadWriteContext<string, CommentedValue<string>> context)
+        {
+            // 获取文件的外部更新时间。
+            _file.Refresh();
+            var lastWriteTime = _file.Exists ? _file.LastWriteTimeUtc : DateTimeOffset.UtcNow;
 
-            // 记录保存失败时的异常，并抛出。
-            if (exception != null)
+            // 读取文件。
+            using var fs = File.Open(_file.FullName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+
+            using var reader = new StreamReader(fs, Encoding.UTF8);
+            using var writer = new StreamWriter(fs, Encoding.UTF8);
+            var text = reader.ReadToEnd();
+
+            // 将文件中的键值集合与内存中的键值集合合并。
+            var externalKeyValues = CoinConfigurationSerializer.Deserialize(text)
+                .ToDictionary(x => x.Key, x => new CommentedValue<string>(x.Value, ""), StringComparer.Ordinal);
+            var mergedKeyValues = context.MergeExternalKeyValues(externalKeyValues, lastWriteTime)
+                .ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
+
+            // 将合并后的键值集合写回文件。
+            var newText = CoinConfigurationSerializer.Serialize(mergedKeyValues
+                .ToDictionary(x => x.Key, x => x.Value.Value, StringComparer.Ordinal));
+            var areTheSame = string.Equals(text, newText, StringComparison.Ordinal);
+            if (areTheSame)
             {
-                ExceptionDispatchInfo.Capture(exception).Throw();
+                ulong fileTimeUnchanged = 0xFFFFFFFFFFFFFFFF;
+                SetFileTime(fs.SafeFileHandle.DangerousGetHandle(),
+                    fileTimeUnchanged, fileTimeUnchanged, fileTimeUnchanged);
+            }
+            else
+            {
+                writer.Write(newText);
+                fs.SetLength(fs.Position);
             }
         }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetFileTime(IntPtr hFile, in ulong lpCreationTime, in ulong lpLastAccessTime, in ulong lpLastWriteTime);
     }
 }
