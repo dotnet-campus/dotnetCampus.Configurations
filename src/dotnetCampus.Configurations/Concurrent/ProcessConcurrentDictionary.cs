@@ -75,8 +75,15 @@ namespace dotnetCampus.Configurations.Concurrent
                 // 发现被遗弃的锁（其他已退出进程）。已获取到，并可用。
             }
 
-            var context = new CriticalReadWriteContext<TKey, TValue>(UpdateValuesFromExternalCore);
-            duringCriticalReadWriteContext(context);
+            try
+            {
+                var context = new CriticalReadWriteContext<TKey, TValue>(UpdateValuesFromExternalCore);
+                duringCriticalReadWriteContext(context);
+            }
+            finally
+            {
+                mutex.ReleaseMutex();
+            }
         }
 
         /// <summary>
@@ -129,8 +136,8 @@ namespace dotnetCampus.Configurations.Concurrent
             foreach (var key in exceptedKeys)
             {
                 _keyValues.AddOrUpdate(key,
-                    _ => CreateDeletedValue(DateTimeOffset.UtcNow),
-                    (_, existed) => CreateDeletedValue(DateTimeOffset.UtcNow));
+                    _ => CreateDeletedValue(externalUpdateTime),
+                    (_, existed) => CreateMergedInternalValue(existed));
             }
             return _keyValues.Where(x => x.Value.State != ProcessSafeValueState.Deleted).ToDictionary(x => x.Key, x => x.Value.Value);
         }
@@ -160,7 +167,19 @@ namespace dotnetCampus.Configurations.Concurrent
                     value,
                     existedEntry.ExternalValue,
                     DateTimeOffset.UtcNow,
-                    ProcessSafeValueState.NotChanged);
+                    ProcessSafeValueState.Changed);
+
+        /// <summary>
+        /// 将当前内存中存储的值复制一遍，然后标记此值已合并。
+        /// </summary>
+        /// <param name="existedEntry">当前内存中已经存在的值。</param>
+        /// <returns>进程安全的值。</returns>
+        private static ProcessSafeValueEntry<TValue> CreateMergedInternalValue(ProcessSafeValueEntry<TValue> existedEntry)
+            => new ProcessSafeValueEntry<TValue>(
+                existedEntry.Value,
+                existedEntry.Value,
+                existedEntry.LastUpdateTime,
+                ProcessSafeValueState.NotChanged);
 
         /// <summary>
         /// 创建一个由外部值引入的 <see cref="ProcessSafeValueEntry{TValue}"/>。
@@ -173,7 +192,7 @@ namespace dotnetCampus.Configurations.Concurrent
                 value,
                 default,
                 externalUpdateTime,
-                ProcessSafeValueState.Changed);
+                ProcessSafeValueState.NotChanged);
 
         /// <summary>
         /// 根据当前内存中已存在的 <see cref="ProcessSafeValueEntry{TValue}"/> 创建一个合并了外部值的新 <see cref="ProcessSafeValueEntry{TValue}"/>。
