@@ -121,7 +121,7 @@ namespace dotnetCampus.Configurations.Concurrent
             }
         }
 
-        private IReadOnlyDictionary<TKey, TValue> UpdateValuesFromExternalCore(
+        private TimedKeyValues<TKey, TValue> UpdateValuesFromExternalCore(
             IReadOnlyDictionary<TKey, TValue> externalKeyValues,
             DateTimeOffset externalUpdateTime)
         {
@@ -130,17 +130,29 @@ namespace dotnetCampus.Configurations.Concurrent
             foreach (var external in externalKeyValues)
             {
                 _keyValues.AddOrUpdate(external.Key,
+                    // 内存中无值，外部有值 —— 创建外部值。
                     _ => CreateExternalValue(external.Value, externalUpdateTime),
+                    // 内存中有值，外部有值 —— 比较新旧后创建新值。
+                    // 注意：此时无需创建删除值，因为内存中的值如果被删除，仅会标记删除而不会真的删除，直到合并。
                     (_, existed) => CreateExternalValue(external.Value, existed, externalUpdateTime));
             }
             foreach (var key in exceptedKeys)
             {
                 _keyValues.AddOrUpdate(key,
+                    // 内存中无值，外部无值 —— 理论上不可能存在此情况。
                     _ => CreateDeletedValue(externalUpdateTime),
-                    (_, existed) => CreateMergedInternalValue(existed));
+                    // 内存中有值，外部无值 —— 比较新旧后创建新值或创建删除值。
+                    (_, existed) => CreateExternalLatestOrDeletedValue(existed, externalUpdateTime));
             }
-            return _keyValues.Where(x => x.Value.State != ProcessSafeValueState.Deleted).ToDictionary(x => x.Key, x => x.Value.Value);
+            var snap = _keyValues.Where(x => x.Value.State != ProcessSafeValueState.Deleted).ToList();
+            return new TimedKeyValues<TKey, TValue>(
+                snap.ToDictionary(x => x.Key, x => x.Value.Value),
+                // 如果合并后内存中已无值（说明文件可能已被删除或即将被删除），那么将原来文件的时间作为最终时间。
+                snap.Count == 0 ? externalUpdateTime : snap.Max(x => x.Value.LastUpdateTime));
         }
+
+        // 以下所有方法中，CreateInternalXxxValue 表示创建在内存中使用的值，CreateExternalXxxValue 表示创建用于存储到外部文件中的值。
+        // 差别在于内部使用的值会标记改变和删除，而外部存储的值将永远保持未改变。
 
         /// <summary>
         /// 创建一个由内部值新建的 <see cref="ProcessSafeValueEntry{TValue}"/>。
@@ -170,18 +182,6 @@ namespace dotnetCampus.Configurations.Concurrent
                     ProcessSafeValueState.Changed);
 
         /// <summary>
-        /// 将当前内存中存储的值复制一遍，然后标记此值已合并。
-        /// </summary>
-        /// <param name="existedEntry">当前内存中已经存在的值。</param>
-        /// <returns>进程安全的值。</returns>
-        private static ProcessSafeValueEntry<TValue> CreateMergedInternalValue(ProcessSafeValueEntry<TValue> existedEntry)
-            => new ProcessSafeValueEntry<TValue>(
-                existedEntry.Value,
-                existedEntry.Value,
-                existedEntry.LastUpdateTime,
-                ProcessSafeValueState.NotChanged);
-
-        /// <summary>
         /// 创建一个由外部值引入的 <see cref="ProcessSafeValueEntry{TValue}"/>。
         /// </summary>
         /// <param name="value">外部引入的值。</param>
@@ -190,7 +190,7 @@ namespace dotnetCampus.Configurations.Concurrent
         private static ProcessSafeValueEntry<TValue> CreateExternalValue(TValue value, DateTimeOffset externalUpdateTime)
             => new ProcessSafeValueEntry<TValue>(
                 value,
-                default,
+                value,
                 externalUpdateTime,
                 ProcessSafeValueState.NotChanged);
 
@@ -212,17 +212,17 @@ namespace dotnetCampus.Configurations.Concurrent
             {
                 // 值在内存中有更新。
                 return new ProcessSafeValueEntry<TValue>(
-                    value,
-                    existedEntry.ExternalValue,
+                    existedEntry.Value,
+                    existedEntry.Value,
                     existedEntry.LastUpdateTime,
-                    ProcessSafeValueState.Changed);
+                    ProcessSafeValueState.NotChanged);
             }
             else
             {
                 // 值在外部有更新。
                 return new ProcessSafeValueEntry<TValue>(
                     value,
-                    existedEntry.ExternalValue,
+                    value,
                     externalUpdateTime,
                     ProcessSafeValueState.NotChanged);
             }
@@ -239,5 +239,33 @@ namespace dotnetCampus.Configurations.Concurrent
                 default,
                 deletedTime,
                 ProcessSafeValueState.Deleted);
+
+        /// <summary>
+        /// 如果内存中值更新，则将当前内存中存储的值复制一遍，然后标记此值已合并；如果删除时间更新，则创建删除值。
+        /// </summary>
+        /// <param name="existedEntry">当前内存中已经存在的值。</param>
+        /// <param name="externalUpdateTime">外部值的删除时间。</param>
+        /// <returns>进程安全的值。</returns>
+        private static ProcessSafeValueEntry<TValue> CreateExternalLatestOrDeletedValue(ProcessSafeValueEntry<TValue> existedEntry, DateTimeOffset externalUpdateTime)
+        {
+            if (existedEntry.LastUpdateTime > externalUpdateTime)
+            {
+                // 值在内存中有更新。
+                return new ProcessSafeValueEntry<TValue>(
+                    existedEntry.Value,
+                    existedEntry.Value,
+                    existedEntry.LastUpdateTime,
+                    ProcessSafeValueState.NotChanged);
+            }
+            else
+            {
+                // 值在外部已被删除。
+                return new ProcessSafeValueEntry<TValue>(
+                    default,
+                    default,
+                    externalUpdateTime,
+                    ProcessSafeValueState.Deleted);
+            }
+        }
     }
 }

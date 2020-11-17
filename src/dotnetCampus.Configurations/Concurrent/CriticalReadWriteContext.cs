@@ -10,20 +10,20 @@ namespace dotnetCampus.Configurations.Concurrent
     /// <typeparam name="TValue">值。</typeparam>
     public class CriticalReadWriteContext<TKey, TValue> : ICriticalReadWriteContext<TKey, TValue>
     {
-        private readonly Func<IReadOnlyDictionary<TKey, TValue>, DateTimeOffset, IReadOnlyDictionary<TKey, TValue>> _keyValueMergingFunc;
+        private readonly Func<IReadOnlyDictionary<TKey, TValue>, DateTimeOffset, TimedKeyValues<TKey, TValue>> _keyValueMergingFunc;
         
         /// <summary>
         /// 创建 <see cref="CriticalReadWriteContext{TKey, TValue}"/> 的新实例。
         /// </summary>
         /// <param name="keyValueMergingFunc">请在此委托中合并键值集合。</param>
         public CriticalReadWriteContext(Func<IReadOnlyDictionary<TKey, TValue>, DateTimeOffset,
-            IReadOnlyDictionary<TKey, TValue>> keyValueMergingFunc)
+            TimedKeyValues<TKey, TValue>> keyValueMergingFunc)
         {
             _keyValueMergingFunc = keyValueMergingFunc ?? throw new ArgumentNullException(nameof(keyValueMergingFunc));
         }
 
         /// <inheritdoc />
-        public IReadOnlyDictionary<TKey, TValue> MergeExternalKeyValues(IReadOnlyDictionary<TKey, TValue> keyValues, DateTimeOffset? externalUpdateTime = null)
+        public TimedKeyValues<TKey, TValue> MergeExternalKeyValues(IReadOnlyDictionary<TKey, TValue> keyValues, DateTimeOffset? externalUpdateTime = null)
             => _keyValueMergingFunc(keyValues, externalUpdateTime ?? DateTimeOffset.UtcNow);
     }
 }

@@ -247,8 +247,20 @@ namespace dotnetCampus.Configurations.Core
         {
             // 获取文件的外部更新时间。
             _file.Refresh();
-            var lastWriteTime = _file.Exists ? _file.LastWriteTimeUtc : DateTimeOffset.UtcNow;
 
+            // 同步并比较新旧时间。
+            var lastWriteTime = _file.Exists ? _file.LastWriteTimeUtc : DateTimeOffset.UtcNow;
+            var newLastWriteTime = SynchronizeFileCore(context, lastWriteTime);
+
+            // 如果时间改变，就将时间写入。
+            if (lastWriteTime != newLastWriteTime)
+            {
+                _file.LastWriteTimeUtc = newLastWriteTime.DateTime;
+            }
+        }
+
+        private DateTimeOffset SynchronizeFileCore(ICriticalReadWriteContext<string, CommentedValue<string>> context, DateTimeOffset lastWriteTime)
+        {
             // 读取文件。
             using var fs = File.Open(_file.FullName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 
@@ -259,24 +271,19 @@ namespace dotnetCampus.Configurations.Core
             // 将文件中的键值集合与内存中的键值集合合并。
             var externalKeyValues = CoinConfigurationSerializer.Deserialize(text)
                 .ToDictionary(x => x.Key, x => new CommentedValue<string>(x.Value, ""), StringComparer.Ordinal);
-            var mergedKeyValues = context.MergeExternalKeyValues(externalKeyValues, lastWriteTime)
-                .ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
+            var timedMerging = context.MergeExternalKeyValues(externalKeyValues, lastWriteTime);
+            var mergedKeyValues = timedMerging.KeyValues.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
 
             // 将合并后的键值集合写回文件。
             var newText = CoinConfigurationSerializer.Serialize(mergedKeyValues
                 .ToDictionary(x => x.Key, x => x.Value.Value, StringComparer.Ordinal));
             var areTheSame = string.Equals(text, newText, StringComparison.Ordinal);
-            if (areTheSame)
-            {
-                ulong fileTimeUnchanged = 0xFFFFFFFFFFFFFFFF;
-                SetFileTime(fs.SafeFileHandle.DangerousGetHandle(),
-                    fileTimeUnchanged, fileTimeUnchanged, fileTimeUnchanged);
-            }
-            else
+            if (!areTheSame)
             {
                 writer.Write(newText);
                 fs.SetLength(fs.Position);
             }
+            return timedMerging.Time;
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]

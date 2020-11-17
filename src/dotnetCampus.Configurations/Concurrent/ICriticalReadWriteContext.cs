@@ -15,6 +15,6 @@ namespace dotnetCampus.Configurations.Concurrent
         /// </summary>
         /// <param name="keyValues">在进程安全的上下文中读到的键值集合。</param>
         /// <param name="externalUpdateTime">外部值的最近更新时间。</param>
-        public IReadOnlyDictionary<TKey, TValue> MergeExternalKeyValues(IReadOnlyDictionary<TKey, TValue> keyValues, DateTimeOffset? externalUpdateTime = null);
+        public TimedKeyValues<TKey, TValue> MergeExternalKeyValues(IReadOnlyDictionary<TKey, TValue> keyValues, DateTimeOffset? externalUpdateTime = null);
     }
 }
