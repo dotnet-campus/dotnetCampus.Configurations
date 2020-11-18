@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MSTest.Extensions.Contracts;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -67,7 +68,7 @@ NewValue
         }
 
         /// <summary>
-        /// 当监听的文件在外部发生改变的时候。
+        /// 并发读写配置。
         /// </summary>
         [ContractTestCase]
         public void 多进程同时读写配置不丢失()
@@ -77,18 +78,24 @@ NewValue
                 const string dcc = "configs.03.dcc";
                 var repoA = CreateIndependentRepo(dcc);
                 var repoB = CreateIndependentRepo(dcc);
-                var configs = CreateIndependentRepo(dcc).CreateAppConfigurator();
+                var repo = CreateIndependentRepo(dcc);
                 var fakeA = repoA.CreateAppConfigurator().Of<FakeConfiguration>();
                 var fakeB = repoB.CreateAppConfigurator().Of<FakeConfiguration>();
-                var fake = configs.Of<FakeConfiguration>();
+                var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
 
                 fakeA.A = "A";
                 fakeB.B = "B";
                 await Task.WhenAll(repoA.SaveAsync(), repoB.SaveAsync()).ConfigureAwait(false);
-                await configs.ReloadExternalChangesAsync().ConfigureAwait(false);
+                await repo.ReloadExternalChangesAsync().ConfigureAwait(false);
 
                 Assert.AreEqual("A", fake.A);
                 Assert.AreEqual("B", fake.B);
+
+                // 因为文件读写已加锁，所以理论上不应存在读写失败。
+                Debug.WriteLine(FormatSyncingCount(repoA, repoB, repo));
+                Assert.AreEqual(0, repoA.FileSyncingErrorCount);
+                Assert.AreEqual(0, repoB.FileSyncingErrorCount);
+                Assert.AreEqual(0, repo.FileSyncingErrorCount);
             });
 
             "A 进程和 B 进程同时写一个已存在的配置；随后检查文件，两个配置值均有可能，但一定不是原来的值。".Test(async () =>
@@ -96,17 +103,23 @@ NewValue
                 const string dcc = "configs.04.dcc";
                 var repoA = CreateIndependentRepo(dcc);
                 var repoB = CreateIndependentRepo(dcc);
-                var configs = CreateIndependentRepo(dcc).CreateAppConfigurator();
+                var repo = CreateIndependentRepo(dcc);
                 var fakeA = repoA.CreateAppConfigurator().Of<FakeConfiguration>();
                 var fakeB = repoB.CreateAppConfigurator().Of<FakeConfiguration>();
-                var fake = configs.Of<FakeConfiguration>();
+                var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
 
                 fakeA.Key = "A";
                 fakeB.Key = "B";
                 await Task.WhenAll(repoA.SaveAsync(), repoB.SaveAsync()).ConfigureAwait(false);
-                await configs.ReloadExternalChangesAsync().ConfigureAwait(false);
+                await repo.ReloadExternalChangesAsync().ConfigureAwait(false);
 
                 Assert.IsTrue(fake.Key == "A" || fake.Key == "B", $"实际值：{fake.Key}。");
+
+                // 因为文件读写已加锁，所以理论上不应存在读写失败。
+                Debug.WriteLine(FormatSyncingCount(repoA, repoB, repo));
+                Assert.AreEqual(0, repoA.FileSyncingErrorCount);
+                Assert.AreEqual(0, repoB.FileSyncingErrorCount);
+                Assert.AreEqual(0, repo.FileSyncingErrorCount);
             });
         }
 
@@ -116,9 +129,14 @@ NewValue
         /// </summary>
         /// <param name="fileName">文件名，相对于测试路径。</param>
         /// <returns>用于读写配置的 <see cref="FileConfigurationRepo"/> 的新实例。</returns>
-        private FileConfigurationRepo CreateIndependentRepo(string fileName) =>
+        private static FileConfigurationRepo CreateIndependentRepo(string fileName) =>
 #pragma warning disable CS0618 // 类型或成员已过时
             new FileConfigurationRepo(fileName);
 #pragma warning restore CS0618 // 类型或成员已过时
+
+        private static string FormatSyncingCount(params FileConfigurationRepo[] repos)
+        {
+            return $"文件同步次数：{string.Join("; ", repos.Select(x => $"{x.FileSyncingCount}({x.FileSyncingErrorCount})"))}";
+        }
     }
 }

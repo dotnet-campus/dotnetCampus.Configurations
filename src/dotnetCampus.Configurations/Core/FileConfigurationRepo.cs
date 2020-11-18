@@ -22,15 +22,14 @@ namespace dotnetCampus.Configurations.Core
     /// </summary>
     public class FileConfigurationRepo : AsynchronousConfigurationRepo
     {
-        /// <summary>
-        /// 在文件改变后的延迟读取时间。
-        /// </summary>
-        public TimeSpan DelayReadTime { get; set; } = TimeSpan.FromMilliseconds(300);
-
-        /// <summary>
-        /// 延迟保存的时间
-        /// </summary>
-        public TimeSpan DelaySaveTime { get; set; } = TimeSpan.FromMilliseconds(300);
+        private readonly PartialAwaitableRetry _saveLoop;
+        private readonly FileInfo _file;
+        private bool _isPendingReread;
+        private bool _isPendingRereadReentered;
+        private DateTimeOffset _lastDeserializeTime = DateTimeOffset.MinValue;
+        private long _fileSyncingCount;
+        private long _fileSyncingErrorCount;
+        private readonly FileWatcher _watcher;
 
         /// <summary>
         /// 初始化使用 <paramref name="fileName"/> 作为配置文件的 <see cref="FileConfigurationRepo"/> 的新实例。
@@ -52,6 +51,26 @@ namespace dotnetCampus.Configurations.Core
             _ = _watcher.WatchAsync();
             LoadFromFileTask = RequestReloadingFile();
         }
+
+        /// <summary>
+        /// 在文件改变后的延迟读取时间。
+        /// </summary>
+        public TimeSpan DelayReadTime { get; set; } = TimeSpan.FromMilliseconds(300);
+
+        /// <summary>
+        /// 延迟保存的时间
+        /// </summary>
+        public TimeSpan DelaySaveTime { get; set; } = TimeSpan.FromMilliseconds(300);
+
+        /// <summary>
+        /// 获取此配置与文件的同步次数。
+        /// </summary>
+        public long FileSyncingCount => _fileSyncingCount;
+
+        /// <summary>
+        /// 获取此配置与文件的同步失败次数。
+        /// </summary>
+        public long FileSyncingErrorCount => _fileSyncingErrorCount;
 
         /// <summary>
         /// 获取所有目前已经存储的 Key 的集合。
@@ -140,13 +159,6 @@ namespace dotnetCampus.Configurations.Core
 
         private Task LoadFromFileTask { get; set; }
 
-        private readonly PartialAwaitableRetry _saveLoop;
-        private readonly FileInfo _file;
-        private bool _isPendingReread;
-        private bool _isPendingRereadReentered;
-        private DateTimeOffset _lastDeserializeTime = DateTimeOffset.MinValue;
-        private readonly FileWatcher _watcher;
-
         /// <summary>
         /// 要求重新读取外部文件，以更新内存中的缓存。
         /// 如果文件没有改变，则不会更新缓存。
@@ -185,7 +197,7 @@ namespace dotnetCampus.Configurations.Core
                     _isPendingRereadReentered = false;
                     // 等待时间为预期等待时间的 1/2，因为多数情况下，一次文件的改变会收到两次 Change 事件。
                     // 第一次是文件内容的写入，第二次是文件信息（如最近写入时间）的写入。
-                    await Task.Delay((int) DelayReadTime.TotalMilliseconds / 2).ConfigureAwait(false);
+                    await Task.Delay((int)DelayReadTime.TotalMilliseconds / 2).ConfigureAwait(false);
                 } while (_isPendingRereadReentered);
 
                 // 如果之前正在读取文件，则等待文件读取完成。
@@ -231,6 +243,7 @@ namespace dotnetCampus.Configurations.Core
                     catch (IOException)
                     {
                         // 可能存在某些旧版本的代码通过非进程安全的方式读写文件。
+                        Interlocked.Increment(ref _fileSyncingErrorCount);
                         var waitMilliseconds = random.Next(50, 150);
                         Thread.Sleep(waitMilliseconds);
                     }
@@ -245,6 +258,8 @@ namespace dotnetCampus.Configurations.Core
 
         private void SynchronizeCore(ICriticalReadWriteContext<string, CommentedValue<string>> context)
         {
+            Interlocked.Increment(ref _fileSyncingCount);
+
             // 获取文件的外部更新时间。
             _file.Refresh();
 
