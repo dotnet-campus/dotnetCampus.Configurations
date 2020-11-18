@@ -124,6 +124,57 @@ NewValue
         }
 
         /// <summary>
+        /// 控制配置文件读写次数避免过于浪费资源。
+        /// </summary>
+        [ContractTestCase]
+        public void 控制配置文件读写次数避免过于浪费资源()
+        {
+            "初始化，仅同步一次。".Test(async () =>
+            {
+                const string dcc = "configs.05.dcc";
+                var repo = CreateIndependentRepo(dcc);
+                var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
+
+                Assert.AreEqual("", fake.A);
+
+                Debug.WriteLine(FormatSyncingCount(repo));
+                Assert.AreEqual(1, repo.FileSyncingCount);
+                Assert.AreEqual(0, repo.FileSyncingErrorCount);
+            });
+
+            "初始化后，写入配置，共同步两次。".Test(async () =>
+            {
+                const string dcc = "configs.06.dcc";
+                var repo = CreateIndependentRepo(dcc);
+                var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
+                fake.A = "A";
+                await repo.SaveAsync().ConfigureAwait(false);
+
+                Debug.WriteLine(FormatSyncingCount(repo));
+                Assert.AreEqual(2, repo.FileSyncingCount);
+                Assert.AreEqual(0, repo.FileSyncingErrorCount);
+            });
+
+            "初始化后，外部文件改变，共同步两次。".Test(async () =>
+            {
+                const string dcc = "configs.07.dcc";
+                var repo = CreateIndependentRepo(dcc);
+                var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
+                Assert.AreEqual("", fake.A);
+
+                File.WriteAllText(dcc, @">
+Key
+NewValue
+>");
+                await repo.ReloadExternalChangesAsync().ConfigureAwait(false);
+
+                Debug.WriteLine(FormatSyncingCount(repo));
+                Assert.AreEqual(2, repo.FileSyncingCount);
+                Assert.AreEqual(0, repo.FileSyncingErrorCount);
+            });
+        }
+
+        /// <summary>
         /// 创建相互独立的 <see cref="FileConfigurationRepo"/> 的实例。
         /// 正常不应该用这种方式创建配置读写，因为这种方式线程不安全；但这里我们要测跨进程的读写安全，所以采用此方式用跨线程访问全来模拟跨进程访问。
         /// </summary>
