@@ -35,11 +35,6 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         private bool _isPendingReloadReentered;
 
-        /// <summary>
-        /// 内存中的值已改变，正在等待将其同步到文件中。
-        /// </summary>
-        private bool _isPendingSyncing;
-
         private DateTimeOffset _lastDeserializeTime = DateTimeOffset.MinValue;
         private long _fileSyncingCount;
         private long _fileSyncingErrorCount;
@@ -53,28 +48,31 @@ namespace dotnetCampus.Configurations.Core
         [EditorBrowsable(EditorBrowsableState.Never)]
         public FileConfigurationRepo(string fileName)
         {
-            if (fileName == null) throw new ArgumentNullException(nameof(fileName));
+            if (fileName == null)
+            {
+                throw new ArgumentNullException(nameof(fileName));
+            }
 
             var fullPath = Path.GetFullPath(fileName);
             _file = new FileInfo(fullPath);
-            _saveLoop = new PartialAwaitableRetry(SaveCoreAsync);
+            _saveLoop = new PartialAwaitableRetry(LoopSyncTask);
 
             // 监视文件改变。
             _watcher = new FileWatcher(_file);
             _watcher.Changed += OnFileChanged;
             _ = _watcher.WatchAsync();
-            LoadFromFileTask = SynchronizeAsync();
+            ReadFromFileTask = SynchronizeAsync();
         }
 
         /// <summary>
         /// 在文件改变后的延迟读取时间。
         /// </summary>
-        public TimeSpan DelayReadTime { get; set; } = TimeSpan.FromMilliseconds(300);
+        public TimeSpan DelayReadTime { get; set; } = TimeSpan.FromMilliseconds(1);
 
         /// <summary>
         /// 延迟保存的时间
         /// </summary>
-        public TimeSpan DelaySaveTime { get; set; } = TimeSpan.FromMilliseconds(300);
+        public TimeSpan DelaySaveTime { get; set; } = TimeSpan.FromMilliseconds(1);
 
         /// <summary>
         /// 获取此配置与文件的同步次数。
@@ -100,7 +98,7 @@ namespace dotnetCampus.Configurations.Core
         /// </returns>
         protected override async Task<string?> ReadValueCoreAsync(string key)
         {
-            await LoadFromFileTask.ConfigureAwait(false);
+            await ReadFromFileTask.ConfigureAwait(false);
             var value = KeyValues.TryGetValue(key, out var v) ? v.Value : null;
             CT.Debug($"{key} = {value ?? "null"}", "Get");
             return value;
@@ -114,9 +112,8 @@ namespace dotnetCampus.Configurations.Core
         protected override async Task WriteValueCoreAsync(string key, string value)
         {
             value = value ?? throw new ArgumentNullException(nameof(value));
-            _isPendingSyncing = true;
             value = value.Replace(Environment.NewLine, "\n");
-            await LoadFromFileTask.ConfigureAwait(false);
+            await ReadFromFileTask.ConfigureAwait(false);
             CT.Debug($"{key} = {value}", "Set");
             KeyValues[key] = new CommentedValue<string>(value);
         }
@@ -127,8 +124,7 @@ namespace dotnetCampus.Configurations.Core
         /// <param name="key">指定项的 Key。</param>
         protected override async Task RemoveValueCoreAsync(string key)
         {
-            _isPendingSyncing = true;
-            await LoadFromFileTask.ConfigureAwait(false);
+            await ReadFromFileTask.ConfigureAwait(false);
             CT.Debug($"{key} = null", "Set");
             KeyValues.TryRemove(key, out _);
         }
@@ -144,14 +140,17 @@ namespace dotnetCampus.Configurations.Core
         }
 
         /// <summary>
-        /// 保存到文件
+        /// 请求将文件与内存模型进行同步。当采用不安全的读写文件策略时，如发生文件读写冲突，则默认尝试 10 次。
         /// </summary>
-        /// <returns></returns>
-        public async Task SaveAsync(int tryCount = 10)
-        {
-            await LoadFromFileTask.ConfigureAwait(false);
-            await _saveLoop.JoinAsync(tryCount);
-        }
+        /// <returns>可异步等待的对象。</returns>
+        public Task SaveAsync() => SaveAsync(10);
+
+        /// <summary>
+        /// 请求将文件与内存模型进行同步。
+        /// </summary>
+        /// <param name="tryCount">尝试次数。当失败时会尝试重新同步，此值表示算上失败后限制的同步总次数。</param>
+        /// <returns>可异步等待的对象。</returns>
+        public Task SaveAsync(int tryCount) => SynchronizeAsync(tryCount);
 
         /// <summary>
         /// 尝试重新加载此配置文件的外部修改（例如使用其他编辑器或其他客户端修改的部分）。
@@ -160,11 +159,11 @@ namespace dotnetCampus.Configurations.Core
         public async Task ReloadExternalChangesAsync()
         {
             // 如果之前正在读取文件，则等待文件读取完成。
-            await LoadFromFileTask.ConfigureAwait(false);
+            await ReadFromFileTask.ConfigureAwait(false);
             // 现在，强制要求重新读取文件。
-            LoadFromFileTask = SynchronizeAsync();
+            ReadFromFileTask = SynchronizeAsync();
             // 然后，等待重新读取完成。
-            await LoadFromFileTask.ConfigureAwait(false);
+            await ReadFromFileTask.ConfigureAwait(false);
         }
 
         /// <summary>
@@ -173,7 +172,7 @@ namespace dotnetCampus.Configurations.Core
         private ProcessConcurrentDictionary<string, CommentedValue<string>> KeyValues { get; }
             = new ProcessConcurrentDictionary<string, CommentedValue<string>>();
 
-        private Task LoadFromFileTask { get; set; }
+        private Task ReadFromFileTask { get; set; }
 
         /// <summary>
         /// 在配置文件改变的时候，重新读取文件。
@@ -202,10 +201,10 @@ namespace dotnetCampus.Configurations.Core
                 } while (_isPendingReloadReentered);
 
                 // 如果之前正在读取文件，则等待文件读取完成。
-                await LoadFromFileTask.ConfigureAwait(false);
+                await ReadFromFileTask.ConfigureAwait(false);
 
                 // 现在重新读取。
-                // - ~~重新读取文件时不影响对键值对的访问，所以不要求其他地方等待 LoadFromFileTask。~~
+                // - ~~重新读取文件时不影响对键值对的访问，所以不要求其他地方等待 ReadFromFileTask。~~
                 // - 但是，如果正在序列化和保存文件，为了避免写入时覆盖未读取完的键值对，需要等待读取完毕。
                 // ！特别注意！：外部写完文件后配置立刻读，读不到新值；需要调用 ReloadExternalChangesAsync 方法强制加载外部修改；否则将等待自动更新修改。
                 _ = SynchronizeAsync();
@@ -216,7 +215,7 @@ namespace dotnetCampus.Configurations.Core
             }
         }
 
-        private async Task<OperationResult> SaveCoreAsync(PartialRetryContext context)
+        private async Task<OperationResult> LoopSyncTask(PartialRetryContext context)
         {
             context.StepCount = 10;
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
@@ -226,16 +225,20 @@ namespace dotnetCampus.Configurations.Core
 
         /// <summary>
         /// 请求将文件与内存模型进行同步。
+        /// 在读文件时调用此方法后，请将返回值赋值给 <see cref="ReadFromFileTask"/> 以便让后续值的读取使用最新值。
+        /// 在写入文件时调用此方法，请仅将返回值用于等待或忽视返回值，因为写入文件不影响后续读值。
         /// </summary>
+        /// <param name="tryCount">尝试次数。当失败时会尝试重新同步，此值表示算上失败后限制的同步总次数。</param>
         /// <returns>可异步等待的对象。</returns>
-        private async Task SynchronizeAsync()
+        private async Task SynchronizeAsync(int tryCount = -1)
         {
-            if (LoadFromFileTask != null)
+            if (ReadFromFileTask != null)
             {
                 // 在构造方法中执行时，可能为 null。
-                await LoadFromFileTask.ConfigureAwait(false);
+                await ReadFromFileTask.ConfigureAwait(false);
             }
-            await _saveLoop.JoinAsync(-1);
+
+            await _saveLoop.JoinAsync(tryCount);
         }
 
         /// <summary>
@@ -272,20 +275,8 @@ namespace dotnetCampus.Configurations.Core
 
             // 获取文件的外部更新时间。
             _file.Refresh();
-
-            // 同步并比较新旧时间。
             var lastWriteTime = _file.Exists ? _file.LastWriteTimeUtc : DateTimeOffset.UtcNow;
-            var newLastWriteTime = SynchronizeFileCore(context, lastWriteTime);
 
-            // 如果时间改变，就将时间写入。
-            if (lastWriteTime != newLastWriteTime)
-            {
-                _file.LastWriteTimeUtc = newLastWriteTime.DateTime;
-            }
-        }
-
-        private DateTimeOffset SynchronizeFileCore(ICriticalReadWriteContext<string, CommentedValue<string>> context, DateTimeOffset lastWriteTime)
-        {
             // 读取文件。
             using var fs = new FileStream(
                 _file.FullName, FileMode.OpenOrCreate,
@@ -299,24 +290,31 @@ namespace dotnetCampus.Configurations.Core
                 .ToDictionary(x => x.Key, x => new CommentedValue<string>(x.Value, ""), StringComparer.Ordinal);
             var timedMerging = context.MergeExternalKeyValues(externalKeyValues, lastWriteTime);
             var mergedKeyValues = timedMerging.KeyValues.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
-
-            // 将合并后的键值集合写回文件。
             var newText = CoinConfigurationSerializer.Serialize(mergedKeyValues
                 .ToDictionary(x => x.Key, x => x.Value.Value, StringComparer.Ordinal));
+
+            // 将合并后的键值集合写回文件。
             var areTheSame = string.Equals(text, newText, StringComparison.Ordinal);
+            var handle = fs.SafeFileHandle.DangerousGetHandle();
+            long keepUnchanged = unchecked((long)0xFFFFFFFFFFFFFFFF);
             if (!areTheSame)
             {
+                SetFileTime(handle, keepUnchanged, keepUnchanged, keepUnchanged);
                 using var writer = new StreamWriter(fs, new UTF8Encoding(false, false), 0x1000, true);
                 fs.Position = 0;
                 writer.Write(newText);
                 writer.Flush();
                 fs.SetLength(fs.Position);
+                long fileTime = timedMerging.Time.ToFileTime();
             }
-            return timedMerging.Time;
+            else
+            {
+                SetFileTime(handle, keepUnchanged, keepUnchanged, keepUnchanged);
+            }
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool SetFileTime(IntPtr hFile, in ulong lpCreationTime, in ulong lpLastAccessTime, in ulong lpLastWriteTime);
+        private static extern bool SetFileTime(IntPtr hFile, in long lpCreationTime, in long lpLastAccessTime, in long lpLastWriteTime);
     }
 }
