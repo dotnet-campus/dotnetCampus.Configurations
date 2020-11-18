@@ -150,7 +150,15 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         /// <param name="tryCount">尝试次数。当失败时会尝试重新同步，此值表示算上失败后限制的同步总次数。</param>
         /// <returns>可异步等待的对象。</returns>
-        public Task SaveAsync(int tryCount) => SynchronizeAsync(tryCount);
+        public async Task SaveAsync(int tryCount)
+        {
+            // 执行一次等待以便让代码中大量调用的同步（利用 PartialAwaitableRetry 的机制）共用同一个异步任务，节省资源。
+            // 副作用是会慢一拍。
+            await Task.Delay(DelaySaveTime).ConfigureAwait(false);
+
+            // 执行同步。
+            await SynchronizeAsync(tryCount).ConfigureAwait(false);
+        }
 
         /// <summary>
         /// 尝试重新加载此配置文件的外部修改（例如使用其他编辑器或其他客户端修改的部分）。
@@ -218,8 +226,8 @@ namespace dotnetCampus.Configurations.Core
         private async Task<OperationResult> LoopSyncTask(PartialRetryContext context)
         {
             context.StepCount = 10;
-            await Task.Delay(DelaySaveTime).ConfigureAwait(false);
             await Synchronize().ConfigureAwait(false);
+            await Task.Delay(DelaySaveTime).ConfigureAwait(false);
             return true;
         }
 
