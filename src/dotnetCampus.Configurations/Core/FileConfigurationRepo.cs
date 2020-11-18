@@ -262,10 +262,11 @@ namespace dotnetCampus.Configurations.Core
         private DateTimeOffset SynchronizeFileCore(ICriticalReadWriteContext<string, CommentedValue<string>> context, DateTimeOffset lastWriteTime)
         {
             // 读取文件。
-            using var fs = File.Open(_file.FullName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-
-            using var reader = new StreamReader(fs, Encoding.UTF8);
-            using var writer = new StreamWriter(fs, Encoding.UTF8);
+            using var fs = new FileStream(
+                _file.FullName, FileMode.OpenOrCreate,
+                FileAccess.ReadWrite, FileShare.None,
+                0x1000, FileOptions.SequentialScan | FileOptions.WriteThrough);
+            using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
             var text = reader.ReadToEnd();
 
             // 将文件中的键值集合与内存中的键值集合合并。
@@ -280,8 +281,10 @@ namespace dotnetCampus.Configurations.Core
             var areTheSame = string.Equals(text, newText, StringComparison.Ordinal);
             if (!areTheSame)
             {
+                using var writer = new StreamWriter(fs, new UTF8Encoding(false, false), 0x1000, true);
                 fs.Position = 0;
                 writer.Write(newText);
+                writer.Flush();
                 fs.SetLength(fs.Position);
             }
             return timedMerging.Time;

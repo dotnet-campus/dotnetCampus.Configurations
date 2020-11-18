@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace dotnetCampus.Configurations.Tests
@@ -88,6 +89,24 @@ NewValue
 
                 Assert.AreEqual("A", fake.A);
                 Assert.AreEqual("B", fake.B);
+            });
+
+            "A 进程和 B 进程同时写一个已存在的配置；随后检查文件，两个配置值均有可能，但一定不是原来的值。".Test(async () =>
+            {
+                const string dcc = "configs.04.dcc";
+                var repoA = CreateIndependentRepo(dcc);
+                var repoB = CreateIndependentRepo(dcc);
+                var configs = CreateIndependentRepo(dcc).CreateAppConfigurator();
+                var fakeA = repoA.CreateAppConfigurator().Of<FakeConfiguration>();
+                var fakeB = repoB.CreateAppConfigurator().Of<FakeConfiguration>();
+                var fake = configs.Of<FakeConfiguration>();
+
+                fakeA.Key = "A";
+                fakeB.Key = "B";
+                await Task.WhenAll(repoA.SaveAsync(), repoB.SaveAsync()).ConfigureAwait(false);
+                await configs.ReloadExternalChangesAsync().ConfigureAwait(false);
+
+                Assert.IsTrue(fake.Key == "A" || fake.Key == "B", $"实际值：{fake.Key}。");
             });
         }
 
