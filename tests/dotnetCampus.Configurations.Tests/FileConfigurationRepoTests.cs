@@ -92,10 +92,16 @@ NewValue
                 Assert.AreEqual("B", fake.B);
 
                 // 因为文件读写已加锁，所以理论上不应存在读写失败。
-                Debug.WriteLine(FormatSyncingCount(repoA, repoB, repo));
-                Assert.AreEqual(0, repoA.FileSyncingErrorCount);
-                Assert.AreEqual(0, repoB.FileSyncingErrorCount);
-                Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                try
+                {
+                    Assert.AreEqual(0, repoA.FileSyncingErrorCount);
+                    Assert.AreEqual(0, repoB.FileSyncingErrorCount);
+                    Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                }
+                finally
+                {
+                    Debug.WriteLine(FormatSyncingCount(repoA, repoB, repo));
+                }
             });
 
             "A 进程和 B 进程同时写一个已存在的配置；随后检查文件，两个配置值均有可能，但一定不是原来的值。".Test(async () =>
@@ -116,10 +122,16 @@ NewValue
                 Assert.IsTrue(fake.Key == "A" || fake.Key == "B", $"实际值：{fake.Key}。");
 
                 // 因为文件读写已加锁，所以理论上不应存在读写失败。
-                Debug.WriteLine(FormatSyncingCount(repoA, repoB, repo));
-                Assert.AreEqual(0, repoA.FileSyncingErrorCount);
-                Assert.AreEqual(0, repoB.FileSyncingErrorCount);
-                Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                try
+                {
+                    Assert.AreEqual(0, repoA.FileSyncingErrorCount);
+                    Assert.AreEqual(0, repoB.FileSyncingErrorCount);
+                    Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                }
+                finally
+                {
+                    Debug.WriteLine(FormatSyncingCount(repoA, repoB, repo));
+                }
             });
         }
 
@@ -137,9 +149,15 @@ NewValue
 
                 Assert.AreEqual("", fake.A);
 
-                Debug.WriteLine(FormatSyncingCount(repo));
-                Assert.AreEqual(1, repo.FileSyncingCount);
-                Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                try
+                {
+                    Assert.AreEqual(1, repo.FileSyncingCount);
+                    Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                }
+                finally
+                {
+                    Debug.WriteLine(FormatSyncingCount(repo));
+                }
             });
 
             "初始化后，写入配置，共同步两次。".Test(async () =>
@@ -150,9 +168,16 @@ NewValue
                 fake.A = "A";
                 await repo.SaveAsync().ConfigureAwait(false);
 
-                Debug.WriteLine(FormatSyncingCount(repo));
-                Assert.AreEqual(2, repo.FileSyncingCount);
-                Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                try
+                {
+                    // 在核心数较少时，自动保存和 SaveAsync 的调用会按顺序执行，而不会并发执行，这会导致多执行一次。
+                    Assert.IsTrue(repo.FileSyncingCount <= 3);
+                    Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                }
+                finally
+                {
+                    Debug.WriteLine(FormatSyncingCount(repo));
+                }
             });
 
             "初始化后，外部文件改变，共同步两次。".Test(async () =>
@@ -168,9 +193,15 @@ NewValue
 >");
                 await repo.ReloadExternalChangesAsync().ConfigureAwait(false);
 
-                Debug.WriteLine(FormatSyncingCount(repo));
-                Assert.AreEqual(2, repo.FileSyncingCount);
-                Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                try
+                {
+                    Assert.AreEqual(2, repo.FileSyncingCount);
+                    Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                }
+                finally
+                {
+                    Debug.WriteLine(FormatSyncingCount(repo));
+                }
             });
         }
 
