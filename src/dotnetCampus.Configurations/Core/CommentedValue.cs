@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -10,6 +11,7 @@ namespace dotnetCampus.Configurations.Core
     /// <summary>
     /// 被注释的值。
     /// </summary>
+    [DebuggerDisplay("{Value,nq} // {Comment,nq}")]
     public readonly struct CommentedValue<T> : IEquatable<CommentedValue<T>>
     {
         /// <summary>

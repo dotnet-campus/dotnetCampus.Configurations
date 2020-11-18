@@ -280,6 +280,7 @@ namespace dotnetCampus.Configurations.Core
             var areTheSame = string.Equals(text, newText, StringComparison.Ordinal);
             if (!areTheSame)
             {
+                fs.Position = 0;
                 writer.Write(newText);
                 fs.SetLength(fs.Position);
             }

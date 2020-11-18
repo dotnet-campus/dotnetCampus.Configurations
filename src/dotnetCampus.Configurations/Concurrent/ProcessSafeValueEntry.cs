@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace dotnetCampus.Configurations.Concurrent
 {
@@ -6,6 +7,7 @@ namespace dotnetCampus.Configurations.Concurrent
     /// 表示一个跨进程安全的值存储空间。
     /// </summary>
     /// <typeparam name="TValue">值的类型。</typeparam>
+    [DebuggerDisplay("{Value,nq} [{State}] // {LastUpdateTime}")]
     internal readonly struct ProcessSafeValueEntry<TValue>
     {
         internal ProcessSafeValueEntry(TValue value, TValue externalValue, DateTimeOffset timestamp, ProcessSafeValueState state)
