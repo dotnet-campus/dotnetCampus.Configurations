@@ -24,8 +24,22 @@ namespace dotnetCampus.Configurations.Core
     {
         private readonly PartialAwaitableRetry _saveLoop;
         private readonly FileInfo _file;
-        private bool _isPendingReread;
-        private bool _isPendingRereadReentered;
+
+        /// <summary>
+        /// 发现文件已改变，正在等待重新读取文件。
+        /// </summary>
+        private bool _isPendingReload;
+
+        /// <summary>
+        /// 发现文件改变，并且在读取的过程中又改变了，因此可能有必要重读。
+        /// </summary>
+        private bool _isPendingReloadReentered;
+
+        /// <summary>
+        /// 内存中的值已改变，正在等待将其同步到文件中。
+        /// </summary>
+        private bool _isPendingSyncing;
+
         private DateTimeOffset _lastDeserializeTime = DateTimeOffset.MinValue;
         private long _fileSyncingCount;
         private long _fileSyncingErrorCount;
@@ -49,7 +63,7 @@ namespace dotnetCampus.Configurations.Core
             _watcher = new FileWatcher(_file);
             _watcher.Changed += OnFileChanged;
             _ = _watcher.WatchAsync();
-            LoadFromFileTask = RequestReloadingFile();
+            LoadFromFileTask = SynchronizeAsync();
         }
 
         /// <summary>
@@ -100,6 +114,7 @@ namespace dotnetCampus.Configurations.Core
         protected override async Task WriteValueCoreAsync(string key, string value)
         {
             value = value ?? throw new ArgumentNullException(nameof(value));
+            _isPendingSyncing = true;
             value = value.Replace(Environment.NewLine, "\n");
             await LoadFromFileTask.ConfigureAwait(false);
             CT.Debug($"{key} = {value}", "Set");
@@ -112,6 +127,7 @@ namespace dotnetCampus.Configurations.Core
         /// <param name="key">指定项的 Key。</param>
         protected override async Task RemoveValueCoreAsync(string key)
         {
+            _isPendingSyncing = true;
             await LoadFromFileTask.ConfigureAwait(false);
             CT.Debug($"{key} = null", "Set");
             KeyValues.TryRemove(key, out _);
@@ -146,7 +162,7 @@ namespace dotnetCampus.Configurations.Core
             // 如果之前正在读取文件，则等待文件读取完成。
             await LoadFromFileTask.ConfigureAwait(false);
             // 现在，强制要求重新读取文件。
-            LoadFromFileTask = RequestReloadingFile();
+            LoadFromFileTask = SynchronizeAsync();
             // 然后，等待重新读取完成。
             await LoadFromFileTask.ConfigureAwait(false);
         }
@@ -160,45 +176,30 @@ namespace dotnetCampus.Configurations.Core
         private Task LoadFromFileTask { get; set; }
 
         /// <summary>
-        /// 要求重新读取外部文件，以更新内存中的缓存。
-        /// 如果文件没有改变，则不会更新缓存。
-        /// </summary>
-        private Task RequestReloadingFile()
-        {
-            var lastWriteTime = new FileInfo(_file.FullName).LastWriteTimeUtc;
-            if (lastWriteTime == _lastDeserializeTime && LoadFromFileTask != null)
-            {
-                return Task.FromResult<object?>(null);
-            }
-            LoadFromFileTask = Task.Run(async () => await Synchronize().ConfigureAwait(false));
-            return LoadFromFileTask;
-        }
-
-        /// <summary>
         /// 在配置文件改变的时候，重新读取文件。
         /// </summary>
         private async void OnFileChanged(object? sender, EventArgs e)
         {
             CT.Debug($"检测到文件被改变...", "File");
-            var isPending = _isPendingReread;
+            var isPending = _isPendingReload;
             if (isPending)
             {
                 // 如果发现已经在准备读取文件了，那么就告诉他又进来了一次，他可能还需要读。
-                _isPendingRereadReentered = true;
+                _isPendingReloadReentered = true;
                 return;
             }
 
-            _isPendingReread = true;
+            _isPendingReload = true;
 
             try
             {
                 do
                 {
-                    _isPendingRereadReentered = false;
+                    _isPendingReloadReentered = false;
                     // 等待时间为预期等待时间的 1/2，因为多数情况下，一次文件的改变会收到两次 Change 事件。
                     // 第一次是文件内容的写入，第二次是文件信息（如最近写入时间）的写入。
                     await Task.Delay((int)DelayReadTime.TotalMilliseconds / 2).ConfigureAwait(false);
-                } while (_isPendingRereadReentered);
+                } while (_isPendingReloadReentered);
 
                 // 如果之前正在读取文件，则等待文件读取完成。
                 await LoadFromFileTask.ConfigureAwait(false);
@@ -207,11 +208,11 @@ namespace dotnetCampus.Configurations.Core
                 // - ~~重新读取文件时不影响对键值对的访问，所以不要求其他地方等待 LoadFromFileTask。~~
                 // - 但是，如果正在序列化和保存文件，为了避免写入时覆盖未读取完的键值对，需要等待读取完毕。
                 // ！特别注意！：外部写完文件后配置立刻读，读不到新值；需要调用 ReloadExternalChangesAsync 方法强制加载外部修改；否则将等待自动更新修改。
-                _ = RequestReloadingFile();
+                _ = SynchronizeAsync();
             }
             finally
             {
-                _isPendingReread = false;
+                _isPendingReload = false;
             }
         }
 
@@ -224,6 +225,20 @@ namespace dotnetCampus.Configurations.Core
         }
 
         /// <summary>
+        /// 请求将文件与内存模型进行同步。
+        /// </summary>
+        /// <returns>可异步等待的对象。</returns>
+        private async Task SynchronizeAsync()
+        {
+            if (LoadFromFileTask != null)
+            {
+                // 在构造方法中执行时，可能为 null。
+                await LoadFromFileTask.ConfigureAwait(false);
+            }
+            await _saveLoop.JoinAsync(-1);
+        }
+
+        /// <summary>
         /// 将文件与内存模型进行同步。
         /// </summary>
         /// <returns>可异步等待的对象。</returns>
@@ -232,21 +247,16 @@ namespace dotnetCampus.Configurations.Core
             KeyValues.UpdateValuesFromExternal(_file, context =>
             {
                 // 此处代码是跨进程安全的。
-                var random = new Random();
-                for (var i = 0; i < 4; i++)
+                try
                 {
-                    try
-                    {
-                        SynchronizeCore(context);
-                        return;
-                    }
-                    catch (IOException)
-                    {
-                        // 可能存在某些旧版本的代码通过非进程安全的方式读写文件。
-                        Interlocked.Increment(ref _fileSyncingErrorCount);
-                        var waitMilliseconds = random.Next(50, 150);
-                        Thread.Sleep(waitMilliseconds);
-                    }
+                    SynchronizeCore(context);
+                    return;
+                }
+                catch (IOException)
+                {
+                    // 可能存在某些旧版本的代码通过非进程安全的方式读写文件。
+                    Interlocked.Increment(ref _fileSyncingErrorCount);
+                    throw;
                 }
             });
 #if NETFRAMEWORK
