@@ -299,19 +299,23 @@ namespace dotnetCampus.Configurations.Core
             // 将合并后的键值集合写回文件。
             var areTheSame = string.Equals(text, newText, StringComparison.Ordinal);
             var handle = fs.SafeFileHandle.DangerousGetHandle();
-            long keepUnchanged = unchecked((long)0xFFFFFFFFFFFFFFFF);
+            var keepUnchanged = unchecked((long)0xFFFFFFFFFFFFFFFF);
             if (!areTheSame)
             {
-                SetFileTime(handle, keepUnchanged, keepUnchanged, keepUnchanged);
                 using var writer = new StreamWriter(fs, new UTF8Encoding(false, false), 0x1000, true);
                 fs.Position = 0;
                 writer.Write(newText);
                 writer.Flush();
                 fs.SetLength(fs.Position);
-                long fileTime = timedMerging.Time.ToFileTime();
+
+                // .NET 没有提供文件流关闭前修改写入时间的功能，所以只能通过 P/Invoke 的方式修改。
+                var fileTime = timedMerging.Time.ToFileTime();
+                SetFileTime(handle, keepUnchanged, keepUnchanged, fileTime);
             }
             else
             {
+                // 全部传入 UNCHANGED 不会触发其他进程的 FileChanged。
+                // https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfiletime
                 SetFileTime(handle, keepUnchanged, keepUnchanged, keepUnchanged);
             }
         }
