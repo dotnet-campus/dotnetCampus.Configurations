@@ -75,7 +75,7 @@ namespace dotnetCampus.Configurations.Core
         public TimeSpan DelaySaveTime { get; set; } = TimeSpan.FromMilliseconds(1);
 
         /// <summary>
-        /// 获取此配置与文件的同步次数。
+        /// 获取此配置与文件同步的总尝试次数（包含失败的尝试）。
         /// </summary>
         public long FileSyncingCount => _fileSyncingCount;
 
@@ -140,17 +140,12 @@ namespace dotnetCampus.Configurations.Core
         }
 
         /// <summary>
-        /// 请求将文件与内存模型进行同步。当采用不安全的读写文件策略时，如发生文件读写冲突，则默认尝试 10 次。
-        /// </summary>
-        /// <returns>可异步等待的对象。</returns>
-        public Task SaveAsync() => SaveAsync(10);
-
-        /// <summary>
         /// 请求将文件与内存模型进行同步。
+        /// 当采用不安全的读写文件策略时，有可能发生文件读写冲突；而发生时，会尝试 <paramref name="tryCount"/> 次。
         /// </summary>
         /// <param name="tryCount">尝试次数。当失败时会尝试重新同步，此值表示算上失败后限制的同步总次数。</param>
         /// <returns>可异步等待的对象。</returns>
-        public async Task SaveAsync(int tryCount)
+        public async Task SaveAsync(int tryCount = 10)
         {
             // 执行一次等待以便让代码中大量调用的同步（利用 PartialAwaitableRetry 的机制）共用同一个异步任务，节省资源。
             // 副作用是会慢一拍。
@@ -236,13 +231,13 @@ namespace dotnetCampus.Configurations.Core
         /// 在读文件时调用此方法后，请将返回值赋值给 <see cref="ReadFromFileTask"/> 以便让后续值的读取使用最新值。
         /// 在写入文件时调用此方法，请仅将返回值用于等待或忽视返回值，因为写入文件不影响后续读值。
         /// </summary>
-        /// <param name="tryCount">尝试次数。当失败时会尝试重新同步，此值表示算上失败后限制的同步总次数。</param>
+        /// <param name="tryCount">尝试次数。当失败时会尝试重新同步，此值表示算上失败后限制的同步总次数。当设置为 -1 时表示无限次重试。</param>
         /// <returns>可异步等待的对象。</returns>
         private async Task SynchronizeAsync(int tryCount = -1)
         {
+            // 在构造方法中执行时，可能为 null；因此需要判空（在构造函数中，不需要等待读取）。
             if (ReadFromFileTask != null)
             {
-                // 在构造方法中执行时，可能为 null。
                 await ReadFromFileTask.ConfigureAwait(false);
             }
 
