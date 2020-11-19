@@ -279,7 +279,12 @@ namespace dotnetCampus.Configurations.Core
             // 获取文件的外部更新时间。
             _file.Refresh();
             var lastWriteTime = _file.Exists ? _file.LastWriteTimeUtc : DateTimeOffset.UtcNow;
+            var newLastWriteTime = SynchronizeToFile(context, lastWriteTime);
+            _file.LastWriteTimeUtc = newLastWriteTime.UtcDateTime;
+        }
 
+        private DateTimeOffset SynchronizeToFile(ICriticalReadWriteContext<string, CommentedValue<string>> context, DateTimeOffset lastWriteTime)
+        {
             // 读取文件。
             using var fs = new FileStream(
                 _file.FullName, FileMode.OpenOrCreate,
@@ -299,7 +304,6 @@ namespace dotnetCampus.Configurations.Core
             // 将合并后的键值集合写回文件。
             var areTheSame = string.Equals(text, newText, StringComparison.Ordinal);
             var handle = fs.SafeFileHandle.DangerousGetHandle();
-            var keepUnchanged = unchecked((long)0xFFFFFFFFFFFFFFFF);
             if (!areTheSame)
             {
                 using var writer = new StreamWriter(fs, new UTF8Encoding(false, false), 0x1000, true);
@@ -307,21 +311,12 @@ namespace dotnetCampus.Configurations.Core
                 writer.Write(newText);
                 writer.Flush();
                 fs.SetLength(fs.Position);
-
-                // .NET 没有提供文件流关闭前修改写入时间的功能，所以只能通过 P/Invoke 的方式修改。
-                var fileTime = timedMerging.Time.ToFileTime();
-                SetFileTime(handle, keepUnchanged, keepUnchanged, fileTime);
+                return timedMerging.Time;
             }
             else
             {
-                // 全部传入 UNCHANGED 不会触发其他进程的 FileChanged。
-                // https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfiletime
-                SetFileTime(handle, keepUnchanged, keepUnchanged, keepUnchanged);
+                return lastWriteTime;
             }
         }
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool SetFileTime(IntPtr hFile, in long lpCreationTime, in long lpLastAccessTime, in long lpLastWriteTime);
     }
 }
