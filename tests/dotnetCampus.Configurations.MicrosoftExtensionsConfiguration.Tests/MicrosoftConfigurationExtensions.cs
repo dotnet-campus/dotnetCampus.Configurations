@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 using Microsoft.Extensions.Primitives;
@@ -13,7 +13,7 @@ namespace dotnetCampus.Configurations.MicrosoftExtensionsConfiguration.Tests
         [ContractTestCase]
         public void ConfigurationBuilderToAppConfigurator()
         {
-            "¼ÓÈëÅäÖÃ¹¹½¨µÄÄÚÈÝ£¬¿ÉÒÔÍ¨¹ý AppConfigurator ÉèÖÃ£¬ÉèÖÃÖ®ºó¿ÉÒÔ¶ÁÈ¡µ½".Test(() =>
+            "åŠ å…¥é…ç½®æž„å»ºçš„å†…å®¹ï¼Œå¯ä»¥é€šè¿‡ AppConfigurator è®¾ç½®ï¼Œè®¾ç½®ä¹‹åŽå¯ä»¥è¯»å–åˆ°".Test(() =>
             {
                 // Arrange
                 const string key = "LindexiIsDoubi";
@@ -35,7 +35,7 @@ namespace dotnetCampus.Configurations.MicrosoftExtensionsConfiguration.Tests
         [ContractTestCase]
         public void ConfigurationToAppConfigurator()
         {
-            "Ô­±¾ÔÚ IConfiguration ´æ·ÅµÄÄÚÈÝ£¬¿ÉÒÔÍ¨¹ý AppConfigurator ´´½¨³öÀ´µÄÅäÖÃ¶ÁÈ¡µ½".Test(() =>
+            "åŽŸæœ¬åœ¨ IConfiguration å­˜æ”¾çš„å†…å®¹ï¼Œå¯ä»¥é€šè¿‡ AppConfigurator åˆ›å»ºå‡ºæ¥çš„é…ç½®è¯»å–åˆ°".Test(() =>
             {
                 // Arrange
                 const string key = "LindexiIsDoubi";
