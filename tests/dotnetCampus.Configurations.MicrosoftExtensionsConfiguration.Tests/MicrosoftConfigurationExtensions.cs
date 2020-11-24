@@ -58,7 +58,6 @@ namespace dotnetCampus.Configurations.MicrosoftExtensionsConfiguration.Tests
                 Assert.IsNotNull(configurationValue);
                 Assert.AreEqual(value, configurationValue.ToString());
             });
-
         }
     }
 }
