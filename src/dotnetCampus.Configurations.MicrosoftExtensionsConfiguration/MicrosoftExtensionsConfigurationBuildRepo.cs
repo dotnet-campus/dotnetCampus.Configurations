@@ -42,7 +42,7 @@ namespace dotnetCampus.Configurations.MicrosoftExtensionsConfiguration
             {
                 if (keyFilter(key))
                 {
-                    SetValue(key, null);
+                    _concurrentDictionary.TryRemove(key, out _);
                 }
             }
         }
