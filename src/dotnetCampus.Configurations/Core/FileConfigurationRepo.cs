@@ -75,9 +75,9 @@ namespace dotnetCampus.Configurations.Core
 
             // 监视文件改变。
             _watcher = new FileWatcher(_file);
+            _currentReadingFileTask = SynchronizeAsync();
             _watcher.Changed += OnFileChanged;
             _ = _watcher.WatchAsync();
-            _currentReadingFileTask = SynchronizeAsync();
         }
 
         /// <summary>
