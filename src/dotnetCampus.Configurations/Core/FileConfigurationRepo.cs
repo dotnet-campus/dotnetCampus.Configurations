@@ -222,6 +222,7 @@ namespace dotnetCampus.Configurations.Core
         private async Task<OperationResult> LoopSyncTask(PartialRetryContext context)
         {
             context.StepCount = 10;
+            CT.Debug($"正在同步...", "File");
             KeyValueSynchronizer.Synchronize();
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
             return true;

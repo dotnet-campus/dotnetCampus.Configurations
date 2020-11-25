@@ -18,6 +18,29 @@ namespace dotnetCampus.Configurations.Concurrent
         private readonly Func<string, IReadOnlyDictionary<TKey, TValue>> _deserializer;
 
         /// <summary>
+        /// 如果此文件所在的分区支持高精度时间，则此值为 true，否则为 false。
+        /// 当此值为 false 时，将不能依赖于时间判定文件内容的改变；当为 true 时，大概率可以依赖时间来判定文件内容的改变。
+        /// </summary>
+        // FAT8
+        //  * Does not record dates and is not supported in Windows.
+        // 
+        // FAT12, FAT16, FAT16B and FAT32 (Some of these are not supported in Windows.)
+        //  * Last Modified Time: 2 s
+        //  * Creation Time: 10 ms
+        //  * Access Time: 1 day
+        //  * Deletion Time: 2 s
+        //
+        // exFAT
+        //  * 10 ms for all records.
+        // 
+        // NTFS
+        //  * 100 ns for all records.
+        // 
+        // Live File System (UDF)
+        //  * 1 μs for all records.
+        private readonly bool _supportHighResolutionFileTime;
+
+        /// <summary>
         /// 上次同步文件时，文件的修改时间。如果时间相同，我们就认为文件没有更改过。
         /// </summary>
         private DateTimeOffset _fileLastWriteTime = DateTimeOffset.MinValue;
@@ -46,6 +69,17 @@ namespace dotnetCampus.Configurations.Concurrent
             _file = file ?? throw new ArgumentNullException(nameof(file));
             _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
             _deserializer = deserializer ?? throw new ArgumentNullException(nameof(deserializer));
+
+            try
+            {
+                var drive = new DriveInfo(file.Directory.Root.FullName);
+                _supportHighResolutionFileTime = string.Equals(drive.DriveFormat, "NTFS", StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception)
+            {
+                // 可能连本地驱动器都不是。
+                _supportHighResolutionFileTime = false;
+            }
         }
 
         /// <summary>
@@ -99,8 +133,9 @@ namespace dotnetCampus.Configurations.Concurrent
             // 获取文件的外部更新时间。
             _file.Refresh();
             var lastWriteTime = _file.Exists ? _file.LastWriteTimeUtc : DateTimeOffset.UtcNow;
-            if (lastWriteTime == _fileLastWriteTime)
+            if (_supportHighResolutionFileTime && lastWriteTime == _fileLastWriteTime)
             {
+                // 在支持高精度时间的文件系统上：
                 // 自上次同步文件以来，文件从未发生过更改（无需提前打开文件）。
                 var newLastWriteTime = WriteFileOrDoNothing(context, lastWriteTime);
                 _file.LastWriteTimeUtc = newLastWriteTime.UtcDateTime;
