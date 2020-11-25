@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <!-- 这个程序集的 API 需要讨论，不适合发布正式版本，因为发布了正式版本就需要兼容 -->
+    <!-- 因此在这里固定版本号，在后续可以删除此版本号，使用统一版本 -->
+    <Version>1.0.0-alpha01</Version>
   </PropertyGroup>
 
   <ItemGroup>
