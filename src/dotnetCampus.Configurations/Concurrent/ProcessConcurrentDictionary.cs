@@ -2,10 +2,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 
 using dotnetCampus.Configurations.Utils;
@@ -249,7 +247,6 @@ namespace dotnetCampus.Configurations.Concurrent
         /// <returns>进程安全的值。</returns>
         private static ProcessSafeValueEntry<TValue> CreateExternalLatestOrDeletedValue(ProcessSafeValueEntry<TValue> existedEntry, DateTimeOffset externalUpdateTime)
         {
-            Debug.WriteLine($"本地更新：{existedEntry.LastUpdateTime}，外部更新：{externalUpdateTime}");
             if (existedEntry.State == ProcessSafeValueState.Changed)
             {
                 // 值在内存中有更新。

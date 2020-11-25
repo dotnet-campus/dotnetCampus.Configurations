@@ -160,7 +160,11 @@ namespace dotnetCampus.Configurations.Core
         /// 请求将文件与内存模型进行同步。
         /// 当采用不安全的读写文件策略时，有可能发生文件读写冲突；而发生时，会尝试 <paramref name="tryCount"/> 次。
         /// </summary>
-        /// <param name="tryCount">尝试次数。当失败时会尝试重新同步，此值表示算上失败后限制的同步总次数。</param>
+        /// <param name="tryCount">
+        /// 尝试次数。
+        /// 当失败时会尝试重新同步，此值表示算上失败后限制的同步总次数。
+        /// -1 表示一直尝试直到成功。
+        /// </param>
         /// <returns>可异步等待的对象。</returns>
         public async Task SaveAsync(int tryCount = 10)
         {

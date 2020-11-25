@@ -6,12 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="configs.dcc" />
+    <None Remove="configs.coin" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- 单元测试过程会修改生成的此文件，于是每次编译都应该将其复制到单元测试的目标目录，以便保证每次单元测试使用的是相同的文件。 -->
-    <Content Include="configs.dcc" CopyToOutputDirectory="Always" />
+    <Content Include="configs.coin" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,16 +29,16 @@
 
   <Target Name="PrepareUnitTestTempFiles" AfterTargets="AfterBuild">
     <!-- 每次编译完成之后，删除单元测试中生成的临时文件，避免单元测试某次跑不过导致影响了下一次单元测试。 -->
-    <Delete Files="$(OutputPath)configs.new.dcc" />
+    <Delete Files="$(OutputPath)configs.new.coin" />
     <!-- 单元测试过程会修改生成的此文件，于是每次编译都应该将其复制到单元测试的目标目录，以便保证每次单元测试使用的是相同的文件。 -->
-    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.01.dcc" />
-    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.02.dcc" />
-    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.03.dcc" />
-    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.04.dcc" />
-    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.05.dcc" />
-    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.06.dcc" />
-    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.07.dcc" />
-    <Copy SourceFiles="configs.dcc" DestinationFiles="$(OutputPath)configs.08.dcc" />
+    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.01.coin" />
+    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.02.coin" />
+    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.03.coin" />
+    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.04.coin" />
+    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.05.coin" />
+    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.06.coin" />
+    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.07.coin" />
+    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.08.coin" />
   </Target>
 
 </Project>

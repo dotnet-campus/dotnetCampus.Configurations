@@ -23,12 +23,12 @@ namespace dotnetCampus.Configurations.Tests
         {
             "监听后，文件内容发生了改变，可以读到文件的新值。".Test(async () =>
             {
-                const string dcc = "configs.01.dcc";
-                IAppConfigurator configs = ConfigurationFactory.FromFile(dcc).CreateAppConfigurator();
+                const string coin = "configs.01.coin";
+                IAppConfigurator configs = ConfigurationFactory.FromFile(coin).CreateAppConfigurator();
                 var fake = configs.Of<FakeConfiguration>();
                 var oldValue = fake.Key;
                 Assert.AreEqual("Value", oldValue);
-                File.WriteAllText(dcc, @">
+                File.WriteAllText(coin, @">
 Key
 NewValue
 >");
@@ -39,12 +39,12 @@ NewValue
 
             "监听后，文件才被创建，可以读到文件中一开始就存放的值。".Test(async () =>
             {
-                const string dcc = "configs.new.dcc";
-                IAppConfigurator configs = ConfigurationFactory.FromFile(dcc).CreateAppConfigurator();
+                const string coin = "configs.new.coin";
+                IAppConfigurator configs = ConfigurationFactory.FromFile(coin).CreateAppConfigurator();
                 var fake = configs.Of<FakeConfiguration>();
                 var oldValue = fake.Key;
                 Assert.AreEqual("", oldValue);
-                File.WriteAllText(dcc, @">
+                File.WriteAllText(coin, @">
 Key
 NewValue
 >");
@@ -55,12 +55,12 @@ NewValue
 
             "监听后，文件被删除，相当于所有未保存的值全部被删除。".Test(async () =>
             {
-                const string dcc = "configs.02.dcc";
-                IAppConfigurator configs = ConfigurationFactory.FromFile(dcc).CreateAppConfigurator();
+                const string coin = "configs.02.coin";
+                IAppConfigurator configs = ConfigurationFactory.FromFile(coin).CreateAppConfigurator();
                 var fake = configs.Of<FakeConfiguration>();
                 var oldValue = fake.Key;
                 Assert.AreEqual("Value", oldValue);
-                File.Delete(dcc);
+                File.Delete(coin);
                 await configs.ReloadExternalChangesAsync().ConfigureAwait(false);
                 var newValue = fake.Key;
                 Assert.AreEqual("", newValue);
@@ -75,10 +75,10 @@ NewValue
         {
             "A 进程写 A 配置，同时 B 进程写 B 配置；随后检查文件，两个配置均在。".Test(async () =>
             {
-                const string dcc = "configs.03.dcc";
-                var repoA = CreateIndependentRepo(dcc);
-                var repoB = CreateIndependentRepo(dcc);
-                var repo = CreateIndependentRepo(dcc);
+                const string coin = "configs.03.coin";
+                var repoA = CreateIndependentRepo(coin);
+                var repoB = CreateIndependentRepo(coin);
+                var repo = CreateIndependentRepo(coin);
                 var fakeA = repoA.CreateAppConfigurator().Of<FakeConfiguration>();
                 var fakeB = repoB.CreateAppConfigurator().Of<FakeConfiguration>();
                 var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
@@ -106,10 +106,10 @@ NewValue
 
             "A 进程和 B 进程同时写一个已存在的配置；随后检查文件，两个配置值均有可能，但一定不是原来的值。".Test(async () =>
             {
-                const string dcc = "configs.04.dcc";
-                var repoA = CreateIndependentRepo(dcc);
-                var repoB = CreateIndependentRepo(dcc);
-                var repo = CreateIndependentRepo(dcc);
+                const string coin = "configs.04.coin";
+                var repoA = CreateIndependentRepo(coin);
+                var repoB = CreateIndependentRepo(coin);
+                var repo = CreateIndependentRepo(coin);
                 var fakeA = repoA.CreateAppConfigurator().Of<FakeConfiguration>();
                 var fakeB = repoB.CreateAppConfigurator().Of<FakeConfiguration>();
                 var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
@@ -143,8 +143,8 @@ NewValue
         {
             "初始化，仅同步一次。".Test(async () =>
             {
-                const string dcc = "configs.05.dcc";
-                var repo = CreateIndependentRepo(dcc);
+                const string coin = "configs.05.coin";
+                var repo = CreateIndependentRepo(coin);
                 var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
 
                 Assert.AreEqual("", fake.A);
@@ -162,8 +162,8 @@ NewValue
 
             "初始化后，写入配置，共同步两次。".Test(async () =>
             {
-                const string dcc = "configs.06.dcc";
-                var repo = CreateIndependentRepo(dcc);
+                const string coin = "configs.06.coin";
+                var repo = CreateIndependentRepo(coin);
                 var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
                 fake.A = "A";
                 await repo.SaveAsync().ConfigureAwait(false);
@@ -181,12 +181,12 @@ NewValue
 
             "初始化后，外部文件改变，共同步两次。".Test(async () =>
             {
-                const string dcc = "configs.07.dcc";
-                var repo = CreateIndependentRepo(dcc);
+                const string coin = "configs.07.coin";
+                var repo = CreateIndependentRepo(coin);
                 var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
                 Assert.AreEqual("", fake.A);
 
-                File.WriteAllText(dcc, "> 配置文件\n> 版本 1.0\nKey\nValue\n>\n> 配置文件结束");
+                File.WriteAllText(coin, "> 配置文件\n> 版本 1.0\nKey\nValue\n>\n> 配置文件结束");
                 await repo.ReloadExternalChangesAsync().ConfigureAwait(false);
 
                 try

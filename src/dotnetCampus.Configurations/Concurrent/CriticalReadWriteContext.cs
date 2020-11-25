@@ -8,7 +8,7 @@ namespace dotnetCampus.Configurations.Concurrent
     /// </summary>
     /// <typeparam name="TKey">键。</typeparam>
     /// <typeparam name="TValue">值。</typeparam>
-    public class CriticalReadWriteContext<TKey, TValue> : ICriticalReadWriteContext<TKey, TValue>
+    internal class CriticalReadWriteContext<TKey, TValue> : ICriticalReadWriteContext<TKey, TValue>
     {
         private readonly Func<IReadOnlyDictionary<TKey, TValue>, DateTimeOffset, TimedKeyValues<TKey, TValue>> _keyValueMergingFunc;
         
