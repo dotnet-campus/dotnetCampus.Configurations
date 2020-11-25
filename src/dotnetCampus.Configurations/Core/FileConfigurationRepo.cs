@@ -3,13 +3,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 using dotnetCampus.Configurations.Concurrent;
-using dotnetCampus.Configurations.Utils;
 using dotnetCampus.IO;
 using dotnetCampus.Threading;
 
@@ -22,8 +18,30 @@ namespace dotnetCampus.Configurations.Core
     /// </summary>
     public class FileConfigurationRepo : AsynchronousConfigurationRepo
     {
-        private readonly PartialAwaitableRetry _saveLoop;
+        /// <summary>
+        /// 获取此配置所用的文件。
+        /// </summary>
         private readonly FileInfo _file;
+
+        /// <summary>
+        /// 用于监视文件改变（包括创建和删除）。
+        /// </summary>
+        private readonly FileWatcher _watcher;
+
+        /// <summary>
+        /// 提供循环可等待操作。
+        /// </summary>
+        private readonly PartialAwaitableRetry _saveLoop;
+
+        /// <summary>
+        /// 存储运行时保存的键值对。
+        /// </summary>
+        private readonly FileDictionarySynchronizer<string, CommentedValue<string>> _keyValueSynchronizer;
+
+        /// <summary>
+        /// 当前正在读文件的可等待任务。如果试图读配置，则应该等待此任务完成。
+        /// </summary>
+        private Task _currentReadingFileTask;
 
         /// <summary>
         /// 发现文件已改变，正在等待重新读取文件。
@@ -34,7 +52,6 @@ namespace dotnetCampus.Configurations.Core
         /// 发现文件改变，并且在读取的过程中又改变了，因此可能有必要重读。
         /// </summary>
         private bool _isPendingReloadReentered;
-        private readonly FileWatcher _watcher;
 
         /// <summary>
         /// 初始化使用 <paramref name="fileName"/> 作为配置文件的 <see cref="FileConfigurationRepo"/> 的新实例。
@@ -52,7 +69,7 @@ namespace dotnetCampus.Configurations.Core
             var fullPath = Path.GetFullPath(fileName);
             _file = new FileInfo(fullPath);
             _saveLoop = new PartialAwaitableRetry(LoopSyncTask);
-            KeyValueSynchronizer = new FileDictionarySynchronizer<string, CommentedValue<string>>(_file,
+            _keyValueSynchronizer = new FileDictionarySynchronizer<string, CommentedValue<string>>(_file,
                 x => CoinConfigurationSerializer.Serialize(x.ToDictionary(x => x.Key, x => x.Value.Value, StringComparer.Ordinal)),
                 x => CoinConfigurationSerializer.Deserialize(x).ToDictionary(x => x.Key, x => new CommentedValue<string>(x.Value, ""), StringComparer.Ordinal));
 
@@ -60,7 +77,7 @@ namespace dotnetCampus.Configurations.Core
             _watcher = new FileWatcher(_file);
             _watcher.Changed += OnFileChanged;
             _ = _watcher.WatchAsync();
-            ReadFromFileTask = SynchronizeAsync();
+            _currentReadingFileTask = SynchronizeAsync();
         }
 
         /// <summary>
@@ -76,17 +93,17 @@ namespace dotnetCampus.Configurations.Core
         /// <summary>
         /// 获取此配置与文件同步的总尝试次数（包含失败的尝试）。
         /// </summary>
-        public long FileSyncingCount => KeyValueSynchronizer.FileSyncingCount;
+        public long FileSyncingCount => _keyValueSynchronizer.FileSyncingCount;
 
         /// <summary>
         /// 获取此配置与文件的同步失败次数。
         /// </summary>
-        public long FileSyncingErrorCount => KeyValueSynchronizer.FileSyncingErrorCount;
+        public long FileSyncingErrorCount => _keyValueSynchronizer.FileSyncingErrorCount;
 
         /// <summary>
         /// 获取所有目前已经存储的 Key 的集合。
         /// </summary>
-        protected override ICollection<string> GetKeys() => KeyValueSynchronizer.Dictionary.Keys;
+        protected override ICollection<string> GetKeys() => _keyValueSynchronizer.Dictionary.Keys;
 
         /// <summary>
         /// 获取指定 Key 的值，如果不存在，需要返回 null。
@@ -97,8 +114,8 @@ namespace dotnetCampus.Configurations.Core
         /// </returns>
         protected override async Task<string?> ReadValueCoreAsync(string key)
         {
-            await ReadFromFileTask.ConfigureAwait(false);
-            var value = KeyValueSynchronizer.Dictionary.TryGetValue(key, out var v) ? v.Value : null;
+            await _currentReadingFileTask.ConfigureAwait(false);
+            var value = _keyValueSynchronizer.Dictionary.TryGetValue(key, out var v) ? v.Value : null;
             CT.Debug($"{key} = {value ?? "null"}", "Get");
             return value;
         }
@@ -112,9 +129,9 @@ namespace dotnetCampus.Configurations.Core
         {
             value = value ?? throw new ArgumentNullException(nameof(value));
             value = value.Replace(Environment.NewLine, "\n");
-            await ReadFromFileTask.ConfigureAwait(false);
+            await _currentReadingFileTask.ConfigureAwait(false);
             CT.Debug($"{key} = {value}", "Set");
-            KeyValueSynchronizer.Dictionary[key] = new CommentedValue<string>(value);
+            _keyValueSynchronizer.Dictionary[key] = new CommentedValue<string>(value);
         }
 
         /// <summary>
@@ -123,9 +140,9 @@ namespace dotnetCampus.Configurations.Core
         /// <param name="key">指定项的 Key。</param>
         protected override async Task RemoveValueCoreAsync(string key)
         {
-            await ReadFromFileTask.ConfigureAwait(false);
+            await _currentReadingFileTask.ConfigureAwait(false);
             CT.Debug($"{key} = null", "Set");
-            KeyValueSynchronizer.Dictionary.TryRemove(key, out _);
+            _keyValueSynchronizer.Dictionary.TryRemove(key, out _);
         }
 
         /// <summary>
@@ -162,19 +179,12 @@ namespace dotnetCampus.Configurations.Core
         public async Task ReloadExternalChangesAsync()
         {
             // 如果之前正在读取文件，则等待文件读取完成。
-            await ReadFromFileTask.ConfigureAwait(false);
+            await _currentReadingFileTask.ConfigureAwait(false);
             // 现在，强制要求重新读取文件。
-            ReadFromFileTask = SynchronizeAsync();
+            _currentReadingFileTask = SynchronizeAsync();
             // 然后，等待重新读取完成。
-            await ReadFromFileTask.ConfigureAwait(false);
+            await _currentReadingFileTask.ConfigureAwait(false);
         }
-
-        /// <summary>
-        /// 存储运行时保存的键值对。
-        /// </summary>
-        private FileDictionarySynchronizer<string, CommentedValue<string>> KeyValueSynchronizer { get; }
-
-        private Task ReadFromFileTask { get; set; }
 
         /// <summary>
         /// 在配置文件改变的时候，重新读取文件。
@@ -205,7 +215,7 @@ namespace dotnetCampus.Configurations.Core
                 } while (_isPendingReloadReentered);
 
                 // 如果之前正在读取文件，则等待文件读取完成。
-                await ReadFromFileTask.ConfigureAwait(false);
+                await _currentReadingFileTask.ConfigureAwait(false);
 
                 // 现在重新读取。
                 // - ~~重新读取文件时不影响对键值对的访问，所以不要求其他地方等待 ReadFromFileTask。~~
@@ -223,14 +233,14 @@ namespace dotnetCampus.Configurations.Core
         {
             context.StepCount = 10;
             CT.Debug($"正在同步...", "File");
-            KeyValueSynchronizer.Synchronize();
+            _keyValueSynchronizer.Synchronize();
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
             return true;
         }
 
         /// <summary>
         /// 请求将文件与内存模型进行同步。
-        /// 在读文件时调用此方法后，请将返回值赋值给 <see cref="ReadFromFileTask"/> 以便让后续值的读取使用最新值。
+        /// 在读文件时调用此方法后，请将返回值赋值给 <see cref="_currentReadingFileTask"/> 以便让后续值的读取使用最新值。
         /// 在写入文件时调用此方法，请仅将返回值用于等待或忽视返回值，因为写入文件不影响后续读值。
         /// </summary>
         /// <param name="tryCount">尝试次数。当失败时会尝试重新同步，此值表示算上失败后限制的同步总次数。当设置为 -1 时表示无限次重试。</param>
@@ -238,9 +248,9 @@ namespace dotnetCampus.Configurations.Core
         private async Task SynchronizeAsync(int tryCount = -1)
         {
             // 在构造方法中执行时，可能为 null；因此需要判空（在构造函数中，不需要等待读取）。
-            if (ReadFromFileTask != null)
+            if (_currentReadingFileTask != null)
             {
-                await ReadFromFileTask.ConfigureAwait(false);
+                await _currentReadingFileTask.ConfigureAwait(false);
             }
 
             await _saveLoop.JoinAsync(tryCount);

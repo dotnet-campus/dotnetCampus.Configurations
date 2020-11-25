@@ -141,43 +141,43 @@ NewValue
         [ContractTestCase]
         public void 控制配置文件读写次数避免过于浪费资源()
         {
-            //"初始化，仅同步一次。".Test(async () =>
-            //{
-            //    const string dcc = "configs.05.dcc";
-            //    var repo = CreateIndependentRepo(dcc);
-            //    var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
+            "初始化，仅同步一次。".Test(async () =>
+            {
+                const string dcc = "configs.05.dcc";
+                var repo = CreateIndependentRepo(dcc);
+                var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
 
-            //    Assert.AreEqual("", fake.A);
+                Assert.AreEqual("", fake.A);
 
-            //    try
-            //    {
-            //        Assert.AreEqual(1, repo.FileSyncingCount);
-            //        Assert.AreEqual(0, repo.FileSyncingErrorCount);
-            //    }
-            //    finally
-            //    {
-            //        Debug.WriteLine(FormatSyncingCount(repo));
-            //    }
-            //});
+                try
+                {
+                    Assert.AreEqual(1, repo.FileSyncingCount);
+                    Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                }
+                finally
+                {
+                    Debug.WriteLine(FormatSyncingCount(repo));
+                }
+            });
 
-            //"初始化后，写入配置，共同步两次。".Test(async () =>
-            //{
-            //    const string dcc = "configs.06.dcc";
-            //    var repo = CreateIndependentRepo(dcc);
-            //    var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
-            //    fake.A = "A";
-            //    await repo.SaveAsync().ConfigureAwait(false);
+            "初始化后，写入配置，共同步两次。".Test(async () =>
+            {
+                const string dcc = "configs.06.dcc";
+                var repo = CreateIndependentRepo(dcc);
+                var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
+                fake.A = "A";
+                await repo.SaveAsync().ConfigureAwait(false);
 
-            //    try
-            //    {
-            //        Assert.AreEqual(2, repo.FileSyncingCount);
-            //        Assert.AreEqual(0, repo.FileSyncingErrorCount);
-            //    }
-            //    finally
-            //    {
-            //        Debug.WriteLine(FormatSyncingCount(repo));
-            //    }
-            //});
+                try
+                {
+                    Assert.AreEqual(2, repo.FileSyncingCount);
+                    Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                }
+                finally
+                {
+                    Debug.WriteLine(FormatSyncingCount(repo));
+                }
+            });
 
             "初始化后，外部文件改变，共同步两次。".Test(async () =>
             {
@@ -186,10 +186,7 @@ NewValue
                 var fake = repo.CreateAppConfigurator().Of<FakeConfiguration>();
                 Assert.AreEqual("", fake.A);
 
-                File.WriteAllText(dcc, @">
-Key
-NewValue
->");
+                File.WriteAllText(dcc, "> 配置文件\n> 版本 1.0\nKey\nValue\n>\n> 配置文件结束");
                 await repo.ReloadExternalChangesAsync().ConfigureAwait(false);
 
                 try

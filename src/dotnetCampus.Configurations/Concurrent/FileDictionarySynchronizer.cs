@@ -128,8 +128,6 @@ namespace dotnetCampus.Configurations.Concurrent
         /// <param name="context">用于合并文件与内存中的键值集合。</param>
         private void SynchronizeCore(ICriticalReadWriteContext<TKey, TValue> context)
         {
-            Interlocked.Increment(ref _fileSyncingCount);
-
             // 获取文件的外部更新时间。
             _file.Refresh();
             var lastWriteTime = _file.Exists ? _file.LastWriteTimeUtc : DateTimeOffset.UtcNow;
@@ -159,6 +157,9 @@ namespace dotnetCampus.Configurations.Concurrent
         /// <returns>修改了文件后，新的文件修改时间（如果内容不变，则时间也不变）。</returns>
         private DateTimeOffset ReadWriteFile(ICriticalReadWriteContext<TKey, TValue> context, DateTimeOffset lastWriteTime)
         {
+            // 在会打开文件流的地方自增。
+            Interlocked.Increment(ref _fileSyncingCount);
+
             // 读取文件。
             using var fs = new FileStream(
                 _file.FullName, FileMode.OpenOrCreate,
@@ -202,6 +203,10 @@ namespace dotnetCampus.Configurations.Concurrent
             var areTheSame = string.Equals(text, newText, StringComparison.Ordinal);
             if (!areTheSame)
             {
+                // 在会打开文件流的地方自增。
+                Interlocked.Increment(ref _fileSyncingCount);
+
+                // 写入。
                 using var fs = new FileStream(
                     _file.FullName, FileMode.OpenOrCreate,
                     FileAccess.Write, FileShare.None,
