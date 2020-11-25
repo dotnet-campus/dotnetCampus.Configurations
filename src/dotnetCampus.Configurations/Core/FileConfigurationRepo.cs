@@ -34,10 +34,6 @@ namespace dotnetCampus.Configurations.Core
         /// 发现文件改变，并且在读取的过程中又改变了，因此可能有必要重读。
         /// </summary>
         private bool _isPendingReloadReentered;
-
-        private DateTimeOffset _lastDeserializeTime = DateTimeOffset.MinValue;
-        private long _fileSyncingCount;
-        private long _fileSyncingErrorCount;
         private readonly FileWatcher _watcher;
 
         /// <summary>
@@ -56,6 +52,9 @@ namespace dotnetCampus.Configurations.Core
             var fullPath = Path.GetFullPath(fileName);
             _file = new FileInfo(fullPath);
             _saveLoop = new PartialAwaitableRetry(LoopSyncTask);
+            KeyValueSynchronizer = new FileDictionarySynchronizer<string, CommentedValue<string>>(_file,
+                x => CoinConfigurationSerializer.Serialize(x.ToDictionary(x => x.Key, x => x.Value.Value, StringComparer.Ordinal)),
+                x => CoinConfigurationSerializer.Deserialize(x).ToDictionary(x => x.Key, x => new CommentedValue<string>(x.Value, ""), StringComparer.Ordinal));
 
             // 监视文件改变。
             _watcher = new FileWatcher(_file);
@@ -77,17 +76,17 @@ namespace dotnetCampus.Configurations.Core
         /// <summary>
         /// 获取此配置与文件同步的总尝试次数（包含失败的尝试）。
         /// </summary>
-        public long FileSyncingCount => _fileSyncingCount;
+        public long FileSyncingCount => KeyValueSynchronizer.FileSyncingCount;
 
         /// <summary>
         /// 获取此配置与文件的同步失败次数。
         /// </summary>
-        public long FileSyncingErrorCount => _fileSyncingErrorCount;
+        public long FileSyncingErrorCount => KeyValueSynchronizer.FileSyncingErrorCount;
 
         /// <summary>
         /// 获取所有目前已经存储的 Key 的集合。
         /// </summary>
-        protected override ICollection<string> GetKeys() => KeyValues.Keys;
+        protected override ICollection<string> GetKeys() => KeyValueSynchronizer.Dictionary.Keys;
 
         /// <summary>
         /// 获取指定 Key 的值，如果不存在，需要返回 null。
@@ -99,7 +98,7 @@ namespace dotnetCampus.Configurations.Core
         protected override async Task<string?> ReadValueCoreAsync(string key)
         {
             await ReadFromFileTask.ConfigureAwait(false);
-            var value = KeyValues.TryGetValue(key, out var v) ? v.Value : null;
+            var value = KeyValueSynchronizer.Dictionary.TryGetValue(key, out var v) ? v.Value : null;
             CT.Debug($"{key} = {value ?? "null"}", "Get");
             return value;
         }
@@ -115,7 +114,7 @@ namespace dotnetCampus.Configurations.Core
             value = value.Replace(Environment.NewLine, "\n");
             await ReadFromFileTask.ConfigureAwait(false);
             CT.Debug($"{key} = {value}", "Set");
-            KeyValues[key] = new CommentedValue<string>(value);
+            KeyValueSynchronizer.Dictionary[key] = new CommentedValue<string>(value);
         }
 
         /// <summary>
@@ -126,12 +125,13 @@ namespace dotnetCampus.Configurations.Core
         {
             await ReadFromFileTask.ConfigureAwait(false);
             CT.Debug($"{key} = null", "Set");
-            KeyValues.TryRemove(key, out _);
+            KeyValueSynchronizer.Dictionary.TryRemove(key, out _);
         }
 
         /// <summary>
         /// 在每次有键值改变后触发，在此处将配置进行持久化。
         /// </summary>
+        /// <param name="context">用于追踪异步操作。</param>
         protected override void OnChanged(AsynchronousConfigurationChangeContext context)
         {
             context = context ?? throw new ArgumentNullException(nameof(context));
@@ -172,14 +172,15 @@ namespace dotnetCampus.Configurations.Core
         /// <summary>
         /// 存储运行时保存的键值对。
         /// </summary>
-        private ProcessConcurrentDictionary<string, CommentedValue<string>> KeyValues { get; }
-            = new ProcessConcurrentDictionary<string, CommentedValue<string>>();
+        private FileDictionarySynchronizer<string, CommentedValue<string>> KeyValueSynchronizer { get; }
 
         private Task ReadFromFileTask { get; set; }
 
         /// <summary>
         /// 在配置文件改变的时候，重新读取文件。
         /// </summary>
+        /// <param name="sender"><see cref="FileWatcher"/>。</param>
+        /// <param name="e">空事件参数。</param>
         private async void OnFileChanged(object? sender, EventArgs e)
         {
             CT.Debug($"检测到文件被改变...", "File");
@@ -221,7 +222,7 @@ namespace dotnetCampus.Configurations.Core
         private async Task<OperationResult> LoopSyncTask(PartialRetryContext context)
         {
             context.StepCount = 10;
-            await Synchronize().ConfigureAwait(false);
+            KeyValueSynchronizer.Synchronize();
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
             return true;
         }
@@ -242,81 +243,6 @@ namespace dotnetCampus.Configurations.Core
             }
 
             await _saveLoop.JoinAsync(tryCount);
-        }
-
-        /// <summary>
-        /// 将文件与内存模型进行同步。
-        /// </summary>
-        /// <returns>可异步等待的对象。</returns>
-        private Task Synchronize()
-        {
-            KeyValues.UpdateValuesFromExternal(_file, context =>
-            {
-                // 此处代码是跨进程安全的。
-                try
-                {
-                    SynchronizeCore(context);
-                    return;
-                }
-                catch (IOException)
-                {
-                    // 可能存在某些旧版本的代码通过非进程安全的方式读写文件。
-                    Interlocked.Increment(ref _fileSyncingErrorCount);
-                    throw;
-                }
-            });
-#if NETFRAMEWORK
-            return Task.FromResult(0);
-#else
-            return Task.CompletedTask;
-#endif
-        }
-
-        private void SynchronizeCore(ICriticalReadWriteContext<string, CommentedValue<string>> context)
-        {
-            Interlocked.Increment(ref _fileSyncingCount);
-
-            // 获取文件的外部更新时间。
-            _file.Refresh();
-            var lastWriteTime = _file.Exists ? _file.LastWriteTimeUtc : DateTimeOffset.UtcNow;
-            var newLastWriteTime = SynchronizeToFile(context, lastWriteTime);
-            _file.LastWriteTimeUtc = newLastWriteTime.UtcDateTime;
-        }
-
-        private DateTimeOffset SynchronizeToFile(ICriticalReadWriteContext<string, CommentedValue<string>> context, DateTimeOffset lastWriteTime)
-        {
-            // 读取文件。
-            using var fs = new FileStream(
-                _file.FullName, FileMode.OpenOrCreate,
-                FileAccess.ReadWrite, FileShare.None,
-                0x1000, FileOptions.SequentialScan | FileOptions.WriteThrough);
-            using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
-            var text = reader.ReadToEnd();
-
-            // 将文件中的键值集合与内存中的键值集合合并。
-            var externalKeyValues = CoinConfigurationSerializer.Deserialize(text)
-                .ToDictionary(x => x.Key, x => new CommentedValue<string>(x.Value, ""), StringComparer.Ordinal);
-            var timedMerging = context.MergeExternalKeyValues(externalKeyValues, lastWriteTime);
-            var mergedKeyValues = timedMerging.KeyValues.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
-            var newText = CoinConfigurationSerializer.Serialize(mergedKeyValues
-                .ToDictionary(x => x.Key, x => x.Value.Value, StringComparer.Ordinal));
-
-            // 将合并后的键值集合写回文件。
-            var areTheSame = string.Equals(text, newText, StringComparison.Ordinal);
-            var handle = fs.SafeFileHandle.DangerousGetHandle();
-            if (!areTheSame)
-            {
-                using var writer = new StreamWriter(fs, new UTF8Encoding(false, false), 0x1000, true);
-                fs.Position = 0;
-                writer.Write(newText);
-                writer.Flush();
-                fs.SetLength(fs.Position);
-                return timedMerging.Time;
-            }
-            else
-            {
-                return lastWriteTime;
-            }
         }
     }
 }
