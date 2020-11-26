@@ -80,7 +80,7 @@ namespace dotnetCampus.Configurations.Core
             _watcher = new FileWatcher(_file);
             _currentReadingFileTask = Task.Run(() =>
             {
-                CT.Debug($"初始同步...", "File");
+                CT.Debug($"首次同步...", _file.Name);
                 _keyValueSynchronizer.Synchronize();
             });
             _watcher.Changed += OnFileChanged;
@@ -123,7 +123,7 @@ namespace dotnetCampus.Configurations.Core
         {
             await _currentReadingFileTask.ConfigureAwait(false);
             var value = _keyValueSynchronizer.Dictionary.TryGetValue(key, out var v) ? v : null;
-            CT.Debug($"{key} = {value ?? "null"}", "Get");
+            CT.Debug($"GET {key} = {value ?? "null"}", _file.Name);
             return value;
         }
 
@@ -137,7 +137,7 @@ namespace dotnetCampus.Configurations.Core
             value = value ?? throw new ArgumentNullException(nameof(value));
             value = value.Replace(Environment.NewLine, "\n");
             await _currentReadingFileTask.ConfigureAwait(false);
-            CT.Debug($"{key} = {value}", "Set");
+            CT.Debug($"SET {key} = {value}", _file.Name);
             _keyValueSynchronizer.Dictionary[key] = value;
         }
 
@@ -148,7 +148,7 @@ namespace dotnetCampus.Configurations.Core
         protected override async Task RemoveValueCoreAsync(string key)
         {
             await _currentReadingFileTask.ConfigureAwait(false);
-            CT.Debug($"{key} = null", "Set");
+            CT.Debug($"CLEAN {key} = null", _file.Name);
             _keyValueSynchronizer.Dictionary.TryRemove(key, out _);
         }
 
@@ -189,7 +189,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         public async Task ReloadExternalChangesAsync()
         {
-            CT.Debug($"强制重新读取文件...", "File");
+            CT.Debug($"强制重新读取文件...", _file.Name);
             // 如果之前正在读取文件，则等待文件读取完成。
             await _currentReadingFileTask.ConfigureAwait(false);
             // 现在，强制要求重新读取文件。
@@ -205,7 +205,7 @@ namespace dotnetCampus.Configurations.Core
         /// <param name="e">空事件参数。</param>
         private async void OnFileChanged(object? sender, EventArgs e)
         {
-            CT.Debug($"检测到文件被改变...", "File");
+            CT.Debug($"检测到文件被改变...", _file.Name);
             var isPending = _isPendingReload;
             if (isPending)
             {
@@ -244,7 +244,7 @@ namespace dotnetCampus.Configurations.Core
         private async Task<OperationResult> LoopSyncTask(PartialRetryContext context)
         {
             context.StepCount = 10;
-            CT.Debug($"正在同步...", "File");
+            CT.Debug($"等待同步...", _file.Name);
             _keyValueSynchronizer.Synchronize();
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
             return true;

@@ -125,7 +125,7 @@ namespace dotnetCampus.Configurations.Concurrent
             Dictionary.UpdateValuesFromExternal(_file, context =>
             {
                 // 此处代码是跨进程安全的。
-                CT.Debug($"同步中，正在进程安全区...", "File");
+                CT.Debug($"正在同步，已进入进程安全区...", _file.Name);
                 try
                 {
                     SynchronizeCore(context);
@@ -136,6 +136,10 @@ namespace dotnetCampus.Configurations.Concurrent
                     // 可能存在某些旧版本的代码通过非进程安全的方式读写文件。
                     Interlocked.Increment(ref _fileSyncingErrorCount);
                     throw;
+                }
+                finally
+                {
+                    CT.Debug($"正在同步，已退出进程安全区...", _file.Name);
                 }
             });
         }
@@ -235,7 +239,7 @@ namespace dotnetCampus.Configurations.Concurrent
 
         private string ReadAllText()
         {
-            CT.Debug($"正在读取文件...", "File");
+            CT.Debug($"正在读取文件...", _file.Name, "Sync");
             using var fs = new FileStream(
                 _file.FullName, FileMode.OpenOrCreate,
                 FileAccess.ReadWrite, FileShare.None,
@@ -246,7 +250,7 @@ namespace dotnetCampus.Configurations.Concurrent
 
         private void WriteAllText(string text)
         {
-            CT.Debug($"正在写入文件...", "File");
+            CT.Debug($"正在写入文件...", _file.Name, "Sync");
             using var fileStream = new FileStream(
                 _file.FullName, FileMode.OpenOrCreate,
                 FileAccess.Write, FileShare.None,
