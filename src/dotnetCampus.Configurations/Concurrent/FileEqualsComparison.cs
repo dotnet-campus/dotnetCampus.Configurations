@@ -6,7 +6,7 @@
     internal enum FileEqualsComparison
     {
         /// <summary>
-        /// 整个文件中有必须所有内容相同才视为相等。
+        /// 整个文件中必须所有内容相同才视为相等。
         /// </summary>
         WholeTextEquals,
 
