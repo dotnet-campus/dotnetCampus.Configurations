@@ -75,7 +75,11 @@ namespace dotnetCampus.Configurations.Core
 
             // 监视文件改变。
             _watcher = new FileWatcher(_file);
-            _currentReadingFileTask = SynchronizeAsync();
+            _currentReadingFileTask = Task.Run(() =>
+            {
+                CT.Debug($"初始同步...", "File");
+                _keyValueSynchronizer.Synchronize();
+            });
             _watcher.Changed += OnFileChanged;
             _ = _watcher.WatchAsync();
         }
@@ -182,6 +186,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         public async Task ReloadExternalChangesAsync()
         {
+            CT.Debug($"强制重新读取文件...", "File");
             // 如果之前正在读取文件，则等待文件读取完成。
             await _currentReadingFileTask.ConfigureAwait(false);
             // 现在，强制要求重新读取文件。

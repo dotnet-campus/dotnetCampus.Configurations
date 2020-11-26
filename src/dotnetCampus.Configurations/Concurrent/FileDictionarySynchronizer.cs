@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 
+using CT = dotnetCampus.Configurations.Core.ConfigTracer;
+
 namespace dotnetCampus.Configurations.Concurrent
 {
     /// <summary>
@@ -118,6 +120,7 @@ namespace dotnetCampus.Configurations.Concurrent
             Dictionary.UpdateValuesFromExternal(_file, context =>
             {
                 // 此处代码是跨进程安全的。
+                CT.Debug($"同步中，正在进程安全区...", "File");
                 try
                 {
                     SynchronizeCore(context);
@@ -171,6 +174,7 @@ namespace dotnetCampus.Configurations.Concurrent
         {
             // 在会打开文件流的地方自增。
             Interlocked.Increment(ref _fileSyncingCount);
+            CT.Debug($"正在读取和写入文件...", "File");
 
             // 读取文件。
             using var fs = new FileStream(
@@ -217,6 +221,7 @@ namespace dotnetCampus.Configurations.Concurrent
             {
                 // 在会打开文件流的地方自增。
                 Interlocked.Increment(ref _fileSyncingCount);
+                CT.Debug($"正在写入文件...", "File");
 
                 // 写入。
                 using var fs = new FileStream(
