@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 
@@ -13,6 +14,33 @@ namespace dotnetCampus.Configurations.Concurrent
     /// </summary>
     internal class FileDictionarySynchronizer<TKey, TValue>
     {
+        /// <summary>
+        /// 获取当前已知具有高精度文件时间的文件系统名称（不区分大小写）。
+        /// https://en.wikipedia.org/wiki/Comparison_of_file_systems
+        /// </summary>
+        private static readonly HashSet<string> KnownHighResolutionDriveFormats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Windows NTFS, 100ns
+            "NTFS",
+
+            // macOS APFS, 1ns
+            "APFS",
+
+            // Linux, 1ms
+            "EXT4",
+
+            // 其他已知非高精度时间的文件系统：
+            // FAT8: 不支持记录时间，且 Windows 系统不支持
+            // FAT12, FAT16, FAT16B 和 FAT32:
+            //  * 修改时间 2s
+            //  * 创建时间 10ms
+            //  * 访问时间 1d
+            //  * 删除时间 2s
+            // exFAT: 10ms
+            // Live File System (UDF): 1μs
+            // XFS 和 EXT3: 1s
+        };
+
         private readonly FileInfo _file;
         private readonly Func<IReadOnlyDictionary<TKey, TValue>, string> _serializer;
         private readonly Func<string, IReadOnlyDictionary<TKey, TValue>> _deserializer;
@@ -21,23 +49,6 @@ namespace dotnetCampus.Configurations.Concurrent
         /// 如果此文件所在的分区支持高精度时间，则此值为 true，否则为 false。
         /// 当此值为 false 时，将不能依赖于时间判定文件内容的改变；当为 true 时，大概率可以依赖时间来判定文件内容的改变。
         /// </summary>
-        // FAT8
-        //  * Does not record dates and is not supported in Windows.
-        // 
-        // FAT12, FAT16, FAT16B and FAT32 (Some of these are not supported in Windows.)
-        //  * Last Modified Time: 2 s
-        //  * Creation Time: 10 ms
-        //  * Access Time: 1 day
-        //  * Deletion Time: 2 s
-        //
-        // exFAT
-        //  * 10 ms for all records.
-        // 
-        // NTFS
-        //  * 100 ns for all records.
-        // 
-        // Live File System (UDF)
-        //  * 1 μs for all records.
         private readonly bool _supportHighResolutionFileTime;
 
         /// <summary>
@@ -72,8 +83,8 @@ namespace dotnetCampus.Configurations.Concurrent
 
             try
             {
-                var drive = new DriveInfo(file.Directory.Root.FullName);
-                _supportHighResolutionFileTime = string.Equals(drive.DriveFormat, "NTFS", StringComparison.OrdinalIgnoreCase);
+                var drive = new DriveInfo(file.FullName);
+                _supportHighResolutionFileTime = KnownHighResolutionDriveFormats.Contains(drive.DriveFormat);
             }
             catch (Exception)
             {
@@ -130,7 +141,8 @@ namespace dotnetCampus.Configurations.Concurrent
         {
             // 获取文件的外部更新时间。
             _file.Refresh();
-            var lastWriteTime = _file.Exists ? _file.LastWriteTimeUtc : DateTimeOffset.UtcNow;
+            var utcNow = DateTimeOffset.UtcNow;
+            var lastWriteTime = _file.Exists ? FixFileTime(_file.LastWriteTimeUtc, utcNow) : utcNow;
             if (_supportHighResolutionFileTime && lastWriteTime == _fileLastWriteTime)
             {
                 // 在支持高精度时间的文件系统上：
@@ -242,5 +254,20 @@ namespace dotnetCampus.Configurations.Concurrent
             updatedWriteTime = timedMerging.Time;
             return newText;
         }
+
+        /// <summary>
+        /// 如果文件的时间更新，则说明文件是从未来穿越过来的。
+        /// 来自未来的文件总是更新，这会导致内存中的所有值都无法更新到文件中。
+        /// 于是，我们需要把来自未来的文件拖下水，让它适配古代的时间。
+        /// </summary>
+        /// <param name="time">文件的最近修改时间。</param>
+        /// <param name="utcNow">当前时间。</param>
+        /// <returns>应该视为的新文件时间。</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static DateTimeOffset FixFileTime(DateTimeOffset time, DateTimeOffset utcNow) =>
+            // 如果文件的时间更新，则说明文件是从未来穿越过来的。
+            // 来自未来的文件总是更新，这会导致内存中的所有值都无法更新到文件中。
+            // 于是，我们需要把来自未来的文件拖下水，让它适配古代的时间。
+            time > utcNow ? utcNow : time;
     }
 }

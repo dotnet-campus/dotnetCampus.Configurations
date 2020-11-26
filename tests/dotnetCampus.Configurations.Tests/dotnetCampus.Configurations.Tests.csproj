@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net48;netcoreapp3.1</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -21,6 +23,7 @@
     <PackageReference Include="MSTestEnhancer" Version="1.6.0" />
     <PackageReference Include="Moq" Version="4.13.1" />
     <PackageReference Include="coverlet.collector" Version="1.0.1" />
+    <PackageReference Include="Walterlv.IO.PackageManagement" Version="5.9.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,17 +31,8 @@
   </ItemGroup>
 
   <Target Name="PrepareUnitTestTempFiles" AfterTargets="AfterBuild">
-    <!-- 每次编译完成之后，删除单元测试中生成的临时文件，避免单元测试某次跑不过导致影响了下一次单元测试。 -->
-    <Delete Files="$(OutputPath)configs.new.coin" />
     <!-- 单元测试过程会修改生成的此文件，于是每次编译都应该将其复制到单元测试的目标目录，以便保证每次单元测试使用的是相同的文件。 -->
-    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.01.coin" />
-    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.02.coin" />
-    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.03.coin" />
-    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.04.coin" />
-    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.05.coin" />
-    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.06.coin" />
-    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.07.coin" />
-    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.08.coin" />
+    <Copy SourceFiles="configs.coin" DestinationFiles="$(OutputPath)configs.coin" />
   </Target>
 
 </Project>
