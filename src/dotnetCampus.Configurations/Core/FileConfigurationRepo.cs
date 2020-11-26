@@ -36,7 +36,7 @@ namespace dotnetCampus.Configurations.Core
         /// <summary>
         /// 存储运行时保存的键值对。
         /// </summary>
-        private readonly FileDictionarySynchronizer<string, CommentedValue<string>> _keyValueSynchronizer;
+        private readonly FileDictionarySynchronizer<string, string> _keyValueSynchronizer;
 
         /// <summary>
         /// 当前正在读文件的可等待任务。如果试图读配置，则应该等待此任务完成。
@@ -69,9 +69,12 @@ namespace dotnetCampus.Configurations.Core
             var fullPath = Path.GetFullPath(fileName);
             _file = new FileInfo(fullPath);
             _saveLoop = new PartialAwaitableRetry(LoopSyncTask);
-            _keyValueSynchronizer = new FileDictionarySynchronizer<string, CommentedValue<string>>(_file,
-                x => CoinConfigurationSerializer.Serialize(x.ToDictionary(x => x.Key, x => x.Value.Value, StringComparer.Ordinal)),
-                x => CoinConfigurationSerializer.Deserialize(x).ToDictionary(x => x.Key, x => new CommentedValue<string>(x.Value, ""), StringComparer.Ordinal));
+            _keyValueSynchronizer = new FileDictionarySynchronizer<string, string>(_file,
+                x => CoinConfigurationSerializer.Serialize(x),
+                x => CoinConfigurationSerializer.Deserialize(x),
+                // 因为 COIN 格式的序列化器默认会写“文件头”，导致即使是构造函数也会和原始文件内容不同，于是会写入文件，导致写入次数比预期多一些。
+                // 所以，比较差异时使用 KeyValueEquals 而不是 WholeTextEquals，这可以在目前对注释不敏感的时候提升一些性能。
+                FileEqualsComparison.WholeTextEquals);
 
             // 监视文件改变。
             _watcher = new FileWatcher(_file);
@@ -119,7 +122,7 @@ namespace dotnetCampus.Configurations.Core
         protected override async Task<string?> ReadValueCoreAsync(string key)
         {
             await _currentReadingFileTask.ConfigureAwait(false);
-            var value = _keyValueSynchronizer.Dictionary.TryGetValue(key, out var v) ? v.Value : null;
+            var value = _keyValueSynchronizer.Dictionary.TryGetValue(key, out var v) ? v : null;
             CT.Debug($"{key} = {value ?? "null"}", "Get");
             return value;
         }
@@ -135,7 +138,7 @@ namespace dotnetCampus.Configurations.Core
             value = value.Replace(Environment.NewLine, "\n");
             await _currentReadingFileTask.ConfigureAwait(false);
             CT.Debug($"{key} = {value}", "Set");
-            _keyValueSynchronizer.Dictionary[key] = new CommentedValue<string>(value);
+            _keyValueSynchronizer.Dictionary[key] = value;
         }
 
         /// <summary>

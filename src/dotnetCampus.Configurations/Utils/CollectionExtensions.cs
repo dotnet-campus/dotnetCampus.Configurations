@@ -13,7 +13,7 @@ namespace dotnetCampus.Configurations.Utils
         /// <param name="list1">集合 1。</param>
         /// <param name="list2">集合 2。</param>
         /// <returns>如果两个集合忽略顺序后相等，则返回 true，否则返回 false。</returns>
-        internal static bool SequenceEqualIgnoringOrder<T>(this ICollection<T> list1, ICollection<T> list2)
+        internal static bool SequenceEqualsIgnoringOrder<T>(this ICollection<T> list1, ICollection<T> list2)
         {
             if (list1 == null)
             {
