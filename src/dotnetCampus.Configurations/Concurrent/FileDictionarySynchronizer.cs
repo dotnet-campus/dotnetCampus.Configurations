@@ -66,10 +66,10 @@ namespace dotnetCampus.Configurations.Concurrent
         private string _lastSyncedFileContent = "";
 
         [ContractPublicPropertyName(nameof(FileSyncingCount))]
-        private long _fileSyncingCount;
+        private volatile int _fileSyncingCount;
 
         [ContractPublicPropertyName(nameof(FileSyncingErrorCount))]
-        private long _fileSyncingErrorCount;
+        private volatile int _fileSyncingErrorCount;
 
         /// <summary>
         /// 创建 <see cref="FileDictionarySynchronizer{TKey, TValue}"/> 的新实例，这个实例将帮助同步一个文件和一个内存中的跨进程安全的字典。
@@ -115,12 +115,12 @@ namespace dotnetCampus.Configurations.Concurrent
         /// <summary>
         /// 获取此配置与文件同步的总尝试次数（包含失败的尝试）。
         /// </summary>
-        public long FileSyncingCount => _fileSyncingCount;
+        public int FileSyncingCount => _fileSyncingCount;
 
         /// <summary>
         /// 获取此配置与文件的同步失败次数。
         /// </summary>
-        public long FileSyncingErrorCount => _fileSyncingErrorCount;
+        public int FileSyncingErrorCount => _fileSyncingErrorCount;
 
         /// <summary>
         /// 存储运行时保存的键值对。

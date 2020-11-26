@@ -155,6 +155,7 @@ NewValue
                 {
                     Assert.AreEqual(1, repo.FileSyncingCount);
                     Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                    //Assert.AreEqual(0, repo.SyncWaitingCount);
                 }
                 finally
                 {
@@ -174,6 +175,7 @@ NewValue
                 {
                     Assert.AreEqual(2, repo.FileSyncingCount);
                     Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                    //Assert.AreEqual(0, repo.SyncWaitingCount);
                 }
                 finally
                 {
@@ -195,6 +197,7 @@ NewValue
                 {
                     Assert.AreEqual(2, repo.FileSyncingCount);
                     Assert.AreEqual(0, repo.FileSyncingErrorCount);
+                    //Assert.AreEqual(0, repo.SyncWaitingCount);
                 }
                 finally
                 {

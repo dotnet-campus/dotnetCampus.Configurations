@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using dotnetCampus.Configurations.Concurrent;
@@ -54,6 +55,11 @@ namespace dotnetCampus.Configurations.Core
         private bool _isPendingReloadReentered;
 
         /// <summary>
+        /// 获取为了同步此配置时，耗在等待上的次数。
+        /// </summary>
+        private volatile int _syncWaitingCount;
+
+        /// <summary>
         /// 初始化使用 <paramref name="fileName"/> 作为配置文件的 <see cref="FileConfigurationRepo"/> 的新实例。
         /// </summary>
         /// <param name="fileName">配置文件的文件路径。</param>
@@ -100,12 +106,17 @@ namespace dotnetCampus.Configurations.Core
         /// <summary>
         /// 获取此配置与文件同步的总尝试次数（包含失败的尝试）。
         /// </summary>
-        public long FileSyncingCount => _keyValueSynchronizer.FileSyncingCount;
+        public int FileSyncingCount => _keyValueSynchronizer.FileSyncingCount;
 
         /// <summary>
         /// 获取此配置与文件的同步失败次数。
         /// </summary>
-        public long FileSyncingErrorCount => _keyValueSynchronizer.FileSyncingErrorCount;
+        public int FileSyncingErrorCount => _keyValueSynchronizer.FileSyncingErrorCount;
+
+        /// <summary>
+        /// 获取为了同步此配置时，耗在等待上的次数。
+        /// </summary>
+        public int SyncWaitingCount => _syncWaitingCount;
 
         /// <summary>
         /// 获取所有目前已经存储的 Key 的集合。
@@ -179,6 +190,7 @@ namespace dotnetCampus.Configurations.Core
 
             // 执行一次等待以便让代码中大量调用的同步（利用 PartialAwaitableRetry 的机制）共用同一个异步任务，节省资源。
             // 副作用是会慢一拍。
+            Interlocked.Increment(ref _syncWaitingCount);
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
 
             // 执行同步。
@@ -234,6 +246,7 @@ namespace dotnetCampus.Configurations.Core
                     _isPendingReloadReentered = false;
                     // 等待时间为预期等待时间的 1/2，因为多数情况下，一次文件的改变会收到两次 Change 事件。
                     // 第一次是文件内容的写入，第二次是文件信息（如最近写入时间）的写入。
+                    // Interlocked.Increment(ref _syncWaitingCount);
                     await Task.Delay((int)DelayReadTime.TotalMilliseconds / 2).ConfigureAwait(false);
                 } while (_isPendingReloadReentered);
 
@@ -257,6 +270,7 @@ namespace dotnetCampus.Configurations.Core
             context.StepCount = 10;
             CT.Debug($"等待同步...", _file.Name);
             _keyValueSynchronizer.Synchronize();
+            Interlocked.Increment(ref _syncWaitingCount);
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
             return true;
         }
