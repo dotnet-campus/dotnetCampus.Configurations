@@ -101,6 +101,18 @@ namespace dotnetCampus.Configurations.Concurrent
         }
 
         /// <summary>
+        /// 获取或设置当前是否正处在进程安全的同步文件的代码片段。
+        /// 如果此值为 true，说明期间的文件读写只可能来自于本进程。
+        /// </summary>
+        private bool _isInSyncingArea;
+
+        /// <summary>
+        /// 延迟反映 <see cref="_isInSyncingArea"/> 值的变化。
+        /// <see cref="_isInSyncingArea"/> 值明确表示进程安全区的变化，但 <see cref="_hasCheckedFileChange"/> 在每一次安全区执行结束后，在 <see cref="DangerousCheckIfThisFileChangeIsFromSelf"/> 调用前都将保持 true。
+        /// </summary>
+        private bool _hasCheckedFileChange;
+
+        /// <summary>
         /// 获取此配置与文件同步的总尝试次数（包含失败的尝试）。
         /// </summary>
         public long FileSyncingCount => _fileSyncingCount;
@@ -117,6 +129,29 @@ namespace dotnetCampus.Configurations.Concurrent
             = new ProcessConcurrentDictionary<TKey, TValue>();
 
         /// <summary>
+        /// 以不安全的方式检查此文件的本次改变是否来自于本进程的写入。
+        /// <para>不安全的原因有二：</para>
+        /// <list type="bullet">
+        /// <item>严重依赖于 <see cref="FileDictionarySynchronizer{TKey, TValue}"/> 的使用者必须监听 <see cref="FileSystemWatcher.Changed"/> 事件。</item>
+        /// <item>存在线程安全问题</item>
+        /// </list>
+        /// </summary>
+        /// <returns></returns>
+        public bool DangerousCheckIfThisFileChangeIsFromSelf()
+        {
+            if (_isInSyncingArea)
+            {
+                return true;
+            }
+            if (_hasCheckedFileChange)
+            {
+                _hasCheckedFileChange = false;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// 将文件与内存模型进行同步。
         /// </summary>
         /// <returns>可异步等待的对象。</returns>
@@ -128,6 +163,8 @@ namespace dotnetCampus.Configurations.Concurrent
                 CT.Debug($"正在同步，已进入进程安全区...", _file.Name);
                 try
                 {
+                    _isInSyncingArea = true;
+                    _hasCheckedFileChange = true;
                     SynchronizeCore(context);
                     return;
                 }
@@ -139,6 +176,7 @@ namespace dotnetCampus.Configurations.Concurrent
                 }
                 finally
                 {
+                    _isInSyncingArea = false;
                     CT.Debug($"正在同步，已退出进程安全区...", _file.Name);
                 }
             });
@@ -160,15 +198,18 @@ namespace dotnetCampus.Configurations.Concurrent
             {
                 // 在支持高精度时间的文件系统上：
                 // 自上次同步文件以来，文件从未发生过更改（无需提前打开文件）。
+                CT.Debug($"准备同步时，发现文件时间未改变 {_fileLastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
                 newLastWriteTime = WriteFileOrDoNothing(context, lastWriteTime);
             }
             else
             {
                 // 文件已经发生了更改。
+                CT.Debug($"准备同步时，发现文件时间改变 {_fileLastWriteTime.LocalDateTime:O} -> {lastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
                 newLastWriteTime = ReadWriteFile(context, lastWriteTime);
             }
-            if (_file.LastWriteTimeUtc != newLastWriteTime.UtcDateTime)
+            if (lastWriteTime != newLastWriteTime.UtcDateTime)
             {
+                CT.Debug($"正在更新文件时间 {lastWriteTime.LocalDateTime:O} -> {newLastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
                 _file.LastWriteTimeUtc = newLastWriteTime.UtcDateTime;
             }
             _fileLastWriteTime = newLastWriteTime;

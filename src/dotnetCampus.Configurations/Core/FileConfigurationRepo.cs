@@ -175,6 +175,8 @@ namespace dotnetCampus.Configurations.Core
         /// <returns>可异步等待的对象。</returns>
         public async Task SaveAsync(int tryCount = 10)
         {
+            CT.Debug($"要求保存...", _file.Name);
+
             // 执行一次等待以便让代码中大量调用的同步（利用 PartialAwaitableRetry 的机制）共用同一个异步任务，节省资源。
             // 副作用是会慢一拍。
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
@@ -205,7 +207,16 @@ namespace dotnetCampus.Configurations.Core
         /// <param name="e">空事件参数。</param>
         private async void OnFileChanged(object? sender, EventArgs e)
         {
-            CT.Debug($"检测到文件被改变...", _file.Name);
+            if (_keyValueSynchronizer.DangerousCheckIfThisFileChangeIsFromSelf())
+            {
+                CT.Debug($"忽略本进程导致的文件改变...", _file.Name);
+                return;
+            }
+            else
+            {
+                CT.Debug($"检测到文件被改变...", _file.Name);
+            }
+
             var isPending = _isPendingReload;
             if (isPending)
             {
@@ -265,6 +276,7 @@ namespace dotnetCampus.Configurations.Core
                 await _currentReadingFileTask.ConfigureAwait(false);
             }
 
+            CT.Debug($"申请同步...", _file.Name);
             await _saveLoop.JoinAsync(tryCount);
         }
     }
