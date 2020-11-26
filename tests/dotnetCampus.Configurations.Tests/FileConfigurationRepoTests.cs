@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace dotnetCampus.Configurations.Tests
@@ -58,6 +59,7 @@ NewValue
                 var oldValue = fake.Key;
                 Assert.AreEqual("Value", oldValue);
                 File.Delete(coin.FullName);
+                Thread.Sleep(500);
                 await configs.ReloadExternalChangesAsync().ConfigureAwait(false);
                 var newValue = fake.Key;
                 Assert.AreEqual("", newValue);
