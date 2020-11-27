@@ -199,13 +199,13 @@ namespace dotnetCampus.Configurations.Concurrent
                 // 在支持高精度时间的文件系统上：
                 // 自上次同步文件以来，文件从未发生过更改（无需提前打开文件）。
                 CT.Debug($"准备同步时，发现文件时间未改变 {_fileLastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
-                newLastWriteTime = WriteFileOrDoNothing(context, lastWriteTime);
+                newLastWriteTime = SyncWhenFileHasNotBeenUpdated(context, lastWriteTime);
             }
             else
             {
                 // 文件已经发生了更改。
                 CT.Debug($"准备同步时，发现文件时间改变 {_fileLastWriteTime.LocalDateTime:O} -> {lastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
-                newLastWriteTime = ReadWriteFile(context, lastWriteTime);
+                newLastWriteTime = SyncWhenFileHasBeenUpdated(context, lastWriteTime);
             }
             if (lastWriteTime != newLastWriteTime.UtcDateTime)
             {
@@ -222,7 +222,7 @@ namespace dotnetCampus.Configurations.Concurrent
         /// <param name="context">用于合并文件与内存中的键值集合。</param>
         /// <param name="lastWriteTime">文件的上一次修改时间。</param>
         /// <returns>修改了文件后，新的文件修改时间（如果内容不变，则时间也不变）。</returns>
-        private DateTimeOffset ReadWriteFile(ICriticalReadWriteContext<TKey, TValue> context, DateTimeOffset lastWriteTime)
+        private DateTimeOffset SyncWhenFileHasBeenUpdated(ICriticalReadWriteContext<TKey, TValue> context, DateTimeOffset lastWriteTime)
         {
             // 在会打开文件流的地方自增。
             Interlocked.Increment(ref _fileSyncingCount);
@@ -255,7 +255,7 @@ namespace dotnetCampus.Configurations.Concurrent
         /// <param name="lastWriteTime">文件的上一次修改时间。</param>
         /// <returns>修改了文件后，新的文件修改时间（如果内容不变，则时间也不变）。</returns>
         /// <returns></returns>
-        private DateTimeOffset WriteFileOrDoNothing(ICriticalReadWriteContext<TKey, TValue> context, DateTimeOffset lastWriteTime)
+        private DateTimeOffset SyncWhenFileHasNotBeenUpdated(ICriticalReadWriteContext<TKey, TValue> context, DateTimeOffset lastWriteTime)
         {
             // 将文件中的键值集合与内存中的键值集合合并。
             var newText = MergeFileTextAndKeyValueText(context, lastWriteTime, _lastSyncedFileContent,
