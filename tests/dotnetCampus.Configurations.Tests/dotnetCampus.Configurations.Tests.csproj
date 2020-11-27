@@ -8,8 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="configs.sim.coin" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- 单元测试过程会修改生成的此文件，于是每次编译都应该将其复制到单元测试的目标目录，以便保证每次单元测试使用的是相同的文件。 -->
     <Content Include="configs.coin" CopyToOutputDirectory="Always" />
+    <Content Include="configs.sim.coin" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
   <ItemGroup>
