@@ -5,13 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
-namespace dotnetCampus.Configurations.Tests
+namespace dotnetCampus.Configurations.Tests.Utils
 {
     /// <summary>
     /// 为需要清理的单元测试提供辅助工具。
     /// </summary>
     [TestClass]
-    public static class TestUtil
+    internal static class TestUtil
     {
         private static readonly ConcurrentDictionary<string, FileInfo> AllTempFiles = new ConcurrentDictionary<string, FileInfo>(StringComparer.OrdinalIgnoreCase);
 

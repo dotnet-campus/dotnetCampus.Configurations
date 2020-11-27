@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using dotnetCampus.Configurations.Core;
+using dotnetCampus.Configurations.Tests.Fakes;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MSTest.Extensions.Contracts;
@@ -235,74 +236,6 @@ namespace dotnetCampus.Configurations.Tests
             {
                 dictionary.Remove(key);
             }
-        }
-    }
-
-    internal sealed class DebugConfiguration : Configuration
-    {
-        public bool? IsTested
-        {
-            get => this.GetBoolean();
-            set => this.SetValue(value);
-        }
-
-        public decimal? Amount
-        {
-            get => this.GetDecimal();
-            set => this.SetValue(value);
-        }
-
-        public double? OffsetX
-        {
-            get => this.GetDouble();
-            set => this.SetValue(value);
-        }
-
-        public float? SizeX
-        {
-            get => this.GetSingle();
-            set => this.SetValue(value);
-        }
-
-        public int? Count
-        {
-            get => this.GetInt32();
-            set => this.SetValue(value);
-        }
-
-        public long? Length
-        {
-            get => this.GetInt64();
-            set => this.SetValue(value);
-        }
-
-        public string Message
-        {
-            get => this.GetString();
-            set => this.SetValue(value);
-        }
-
-        public string Host
-        {
-            get => this.GetString() ?? "https://localhost:17134";
-            set => this.SetValue(value);
-        }
-
-        //public Rect? Bounds
-        //{
-        //    get => this.GetValue<Rect>() ?? new Rect(10, 20, 100, 200);
-        //    set => this.SetValue(Equals(value, new Rect(10, 20, 100, 200)) ? null : value);
-        //}
-
-        //public Color? Color
-        //{
-        //    get => this.GetValue<Color>();
-        //    set => this.SetValue(value);
-        //}
-
-        public void Clear()
-        {
-            ClearValues();
         }
     }
 }

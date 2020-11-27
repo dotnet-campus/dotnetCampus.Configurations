@@ -1,4 +1,6 @@
 ﻿using dotnetCampus.Configurations.Core;
+using dotnetCampus.Configurations.Tests.Fakes;
+using dotnetCampus.Configurations.Tests.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MSTest.Extensions.Contracts;
 using System;

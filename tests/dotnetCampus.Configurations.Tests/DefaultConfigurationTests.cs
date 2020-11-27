@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using dotnetCampus.Configurations.Tests.Utils;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MSTest.Extensions.Contracts;
 
 namespace dotnetCampus.Configurations.Tests
