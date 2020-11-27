@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 
-namespace Walterlv.WeakEvents
+namespace dotnetCampus.WeakEvents
 {
     /// <summary>
     /// 为已有对象的事件添加弱事件中继，这可以避免町事件的对象因为无法释放而导致的内存泄漏问题。

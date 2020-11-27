@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace Walterlv.WeakEvents
+namespace dotnetCampus.WeakEvents
 {
     /// <summary>
     /// 定义一个弱事件。
