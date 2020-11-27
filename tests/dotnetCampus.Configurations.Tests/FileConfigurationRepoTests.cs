@@ -1,7 +1,10 @@
 ﻿using dotnetCampus.Configurations.Core;
+using dotnetCampus.Configurations.Tests.Fakes;
+using dotnetCampus.Configurations.Tests.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MSTest.Extensions.Contracts;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -13,6 +16,210 @@ namespace dotnetCampus.Configurations.Tests
     [TestClass]
     public class FileConfigurationRepoTests
     {
+        [ContractTestCase]
+        public void WriteAsync()
+        {
+            "传入的 key 为空或空字符串，抛出异常。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile(null, ".coin");
+                var repo = CreateIndependentRepo(coin);
+
+                // Act && Assert
+                await Assert.ThrowsExceptionAsync<ArgumentNullException>(
+                    () => repo.WriteAsync(null!, "123")).ConfigureAwait(false);
+                _ = repo.WriteAsync("", "123");
+            });
+
+            "写入空白的值，清空这一个值。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile(null, ".coin");
+                var repo = CreateIndependentRepo(coin);
+
+                // Act
+                await repo.WriteAsync("123", "123").ConfigureAwait(false);
+                await repo.WriteAsync("123", null).ConfigureAwait(false);
+                await repo.SaveAsync().ConfigureAwait(false);
+
+                // Assert
+                var repo2 = CreateIndependentRepo(coin);
+                var test = await repo.TryReadAsync("123", "默认").ConfigureAwait(false);
+                Assert.AreEqual("默认", test);
+            });
+
+            "如果文件存在重复的值，最后一个值生效。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile("configs.sim.coin");
+                var repo = CreateIndependentRepo(coin);
+
+                // Act
+                var value = await repo.TryReadAsync("Value").ConfigureAwait(false);
+
+                // Assert
+                Assert.AreEqual("2", value);
+            });
+
+            "写入重复的值，最后一个值生效。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile(null, ".coin");
+                var repo = CreateIndependentRepo(coin);
+                var keyvalueList = new List<KeyValuePair<string, string>>()
+                {
+                    new KeyValuePair<string, string>(">正常的值.Foo", ">123"),
+                    new KeyValuePair<string, string>(">正常的值.Foo", "新的值"),
+                    new KeyValuePair<string, string>("正常的值.Foo", "123"),
+                    new KeyValuePair<string, string>("?正常的值.Foo", "?123"),
+                    new KeyValuePair<string, string>("??正常的值.Foo", "?123"),
+                };
+
+                // Act
+                foreach (var keyvalue in keyvalueList)
+                {
+                    await repo.WriteAsync(keyvalue.Key, keyvalue.Value).ConfigureAwait(false);
+                }
+                await repo.SaveAsync().ConfigureAwait(false);
+
+                // Assert
+                var repo2 = CreateIndependentRepo(coin);
+                var test = await repo2.TryReadAsync(">正常的值.Foo").ConfigureAwait(false);
+                Assert.AreEqual("新的值", test);
+            });
+
+            "写入需要转义的值，存放的文件是转义后的字符。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile(null, ".coin");
+                var repo = CreateIndependentRepo(coin);
+                var keyvalueList = new List<KeyValuePair<string, string>>()
+                {
+                    new KeyValuePair<string, string>(">正常的值.Foo", ">123"),
+                    new KeyValuePair<string, string>(">>正常的值.Foo", ">123"),
+                    new KeyValuePair<string, string>("正常的值.Foo", "123"),
+                    new KeyValuePair<string, string>("?正常的值.Foo", "?123"),
+                    new KeyValuePair<string, string>("??正常的值.Foo", "?123"),
+                };
+
+                // Act
+                foreach (var keyvalue in keyvalueList)
+                {
+                    await repo.WriteAsync(keyvalue.Key, keyvalue.Value).ConfigureAwait(false);
+                }
+                await repo.SaveAsync().ConfigureAwait(false);
+
+                // Assert
+                var repo2 = CreateIndependentRepo(coin);
+                foreach (var keyvalue in keyvalueList)
+                {
+                    var test = await repo2.TryReadAsync(keyvalue.Key).ConfigureAwait(false);
+                    Assert.AreEqual(keyvalue.Value, test);
+                }
+            });
+
+            "写入正常的值，正常存储，可以读出存放的值。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile(null, ".coin");
+                var repo = CreateIndependentRepo(coin);
+
+                // Act
+                await repo.WriteAsync("正常的值.Foo", "123").ConfigureAwait(false);
+                await repo.SaveAsync().ConfigureAwait(false);
+
+                // Assert
+                var repo2 = CreateIndependentRepo(coin);
+                var test = await repo2.TryReadAsync("正常的值.Foo").ConfigureAwait(false);
+                Assert.AreEqual("123", test);
+            });
+
+            "多行存储，可以多行读出。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile(null, ".coin");
+                var repo = CreateIndependentRepo(coin);
+
+                // Act
+#pragma warning disable CS4014 // 由于此调用不会等待，因此在调用完成前将继续执行当前方法
+                repo.WriteAsync("Foo.MultilineValue", @"1
+2
+3");
+#pragma warning restore CS4014 // 由于此调用不会等待，因此在调用完成前将继续执行当前方法
+                await repo.SaveAsync().ConfigureAwait(false);
+
+                // Assert
+                var repo2 = CreateIndependentRepo(coin);
+                var str = await repo2.TryReadAsync("Foo.MultilineValue").ConfigureAwait(false);
+                Assert.AreEqual("1\n2\n3", str);
+            });
+        }
+
+        [ContractTestCase]
+        public void SaveAsync()
+        {
+            "如果没有文件且不需要存储数据，那么不会创建文件。".Test(async () =>
+            {
+                // 【注意】
+                // 此单元测试仅适用于 FileConfigurationRepo 初始化时，相等策略被指定成 FileEqualsComparison.KeyValueEquals 的情况。
+                // 如果指定为 FileEqualsComparison.WholeTextEquals，因为 coin 格式在空集合时也有内容，所以一定会创建文件。
+
+                // Arrange
+                var coin = TestUtil.GetTempFile(null, ".coin");
+                var repo = CreateIndependentRepo(coin);
+
+                // Act
+                await Task.Delay(100).ConfigureAwait(false);
+
+                // Assert
+                Assert.IsFalse(File.Exists(coin.FullName));
+            });
+
+            //"如果没有文件但需要存储数据，那么会创建文件。".Test(async () =>
+            //{
+            //    // Arrange
+            //    var coin = TestUtil.GetTempFile(null, ".coin");
+            //    var repo = CreateIndependentRepo(coin);
+
+            //    // Act
+            //    await repo.WriteAsync("Test.Create", "True").ConfigureAwait(false);
+            //    await repo.SaveAsync().ConfigureAwait(false);
+
+            //    // Assert
+            //    Assert.IsTrue(File.Exists(coin.FullName));
+            //});
+        }
+
+        [ContractTestCase]
+        public void ReadAsync()
+        {
+            "如果配置文件存在且配置存在，那么能读取到配置。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile("configs.sim.coin");
+                var repo = CreateIndependentRepo(coin);
+
+                // Act
+                var value = await repo.TryReadAsync("Test").ConfigureAwait(false);
+
+                // Assert
+                Assert.AreEqual("True", value);
+            });
+
+            "如果配置文件存在但配置不存在，那么能读取到默认值。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile("configs.sim.coin");
+                var repo = CreateIndependentRepo(coin);
+
+                // Act
+                var value = await repo.TryReadAsync("NotExist").ConfigureAwait(false);
+
+                // Assert
+                Assert.AreEqual("", value);
+            });
+        }
+
         /// <summary>
         /// 当监听的文件在外部发生改变的时候。
         /// </summary>

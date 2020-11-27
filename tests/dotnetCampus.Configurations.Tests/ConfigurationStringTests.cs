@@ -14,7 +14,7 @@ namespace dotnetCampus.Configurations.Tests
                 // Arrange
                 string value = "lindexi";
 
-                // Action
+                // Act
                 ConfigurationString? configurationString = value;
 
                 // Assert

@@ -1,6 +1,6 @@
-﻿namespace dotnetCampus.Configurations.Tests
+﻿namespace dotnetCampus.Configurations.Tests.Fakes
 {
-    public class FakeConfiguration : Configuration
+    internal class FakeConfiguration : Configuration
     {
         public FakeConfiguration() : base("")
         {
