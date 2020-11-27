@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using dotnetCampus.Configurations.IO;
 
+using CT = dotnetCampus.Configurations.Core.ConfigTracer;
+
 #pragma warning disable CA1001 // Types that own disposable fields should be disposable
 
 namespace dotnetCampus.IO
@@ -126,6 +128,8 @@ namespace dotnetCampus.IO
 
         private void FileOrDirectory_CreatedOrDeleted(object sender, FileSystemEventArgs e)
         {
+            CT.Debug($"[文件 {e.ChangeType}]", _file.Name);
+
             // 当文件创建或删除之后，需要重新设置监听方式。
             Watch();
 
@@ -133,7 +137,11 @@ namespace dotnetCampus.IO
             OnChanged();
         }
 
-        private void FinalFile_Changed(object sender, FileSystemEventArgs e) => OnChanged();
+        private void FinalFile_Changed(object sender, FileSystemEventArgs e)
+        {
+            CT.Debug($"[文件 Changed]", _file.Name);
+            OnChanged();
+        }
 
         /// <summary>
         /// 从 <see cref="_file"/> 开始寻找第一层存在的文件夹，返回里面的文件。

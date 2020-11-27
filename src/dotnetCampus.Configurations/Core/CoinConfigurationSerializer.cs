@@ -42,7 +42,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         /// <param name="keyValue">要序列化的键值对字典。</param>
         /// <returns>序列化后的文本字符串。</returns>
-        public static string Serialize(ConcurrentDictionary<string, string> keyValue)
+        public static string Serialize(IReadOnlyDictionary<string, string> keyValue)
         {
             if (ReferenceEquals(keyValue, null)) throw new ArgumentNullException(nameof(keyValue));
             var keyValuePairList = keyValue.ToArray().OrderBy(p => p.Key);

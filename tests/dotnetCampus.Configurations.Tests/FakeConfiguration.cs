@@ -11,5 +11,17 @@
             get => GetString();
             set => SetValue(value);
         }
+
+        public string A
+        {
+            get => GetString();
+            set => SetValue(value);
+        }
+
+        public string B
+        {
+            get => GetString();
+            set => SetValue(value);
+        }
     }
 }
