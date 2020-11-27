@@ -158,6 +158,10 @@ namespace dotnetCampus.Configurations.Tests
         {
             "如果没有文件且不需要存储数据，那么不会创建文件。".Test(async () =>
             {
+                // 【注意】
+                // 此单元测试仅适用于 FileConfigurationRepo 初始化时，相等策略被指定成 FileEqualsComparison.KeyValueEquals 的情况。
+                // 如果指定为 FileEqualsComparison.WholeTextEquals，因为 coin 格式在空集合时也有内容，所以一定会创建文件。
+
                 // Arrange
                 var coin = TestUtil.GetTempFile(null, ".coin");
                 var repo = CreateIndependentRepo(coin);
