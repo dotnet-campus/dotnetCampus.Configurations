@@ -7,10 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using dotnetCampus.Configurations.Concurrent;
+using dotnetCampus.Configurations.Utils;
 using dotnetCampus.IO;
 using dotnetCampus.Threading;
-
-using CT = dotnetCampus.Configurations.Core.ConfigTracer;
 
 namespace dotnetCampus.Configurations.Core
 {
@@ -86,7 +85,7 @@ namespace dotnetCampus.Configurations.Core
             _watcher = new FileWatcher(_file);
             _currentReadingFileTask = Task.Run(() =>
             {
-                CT.Debug($"首次同步...", _file.Name);
+                CT.Log($"首次同步...", _file.Name);
                 _keyValueSynchronizer.Synchronize();
             });
             _watcher.Changed += OnFileChanged;
@@ -134,7 +133,7 @@ namespace dotnetCampus.Configurations.Core
         {
             await _currentReadingFileTask.ConfigureAwait(false);
             var value = _keyValueSynchronizer.Dictionary.TryGetValue(key, out var v) ? v : null;
-            CT.Debug($"GET {key} = {value ?? "null"}", _file.Name);
+            CT.Log($"GET {key} = {value ?? "null"}", _file.Name);
             return value;
         }
 
@@ -148,7 +147,7 @@ namespace dotnetCampus.Configurations.Core
             value = value ?? throw new ArgumentNullException(nameof(value));
             value = value.Replace(Environment.NewLine, "\n");
             await _currentReadingFileTask.ConfigureAwait(false);
-            CT.Debug($"SET {key} = {value}", _file.Name);
+            CT.Log($"SET {key} = {value}", _file.Name);
             _keyValueSynchronizer.Dictionary[key] = value;
         }
 
@@ -159,7 +158,7 @@ namespace dotnetCampus.Configurations.Core
         protected override async Task RemoveValueCoreAsync(string key)
         {
             await _currentReadingFileTask.ConfigureAwait(false);
-            CT.Debug($"CLEAN {key} = null", _file.Name);
+            CT.Log($"CLEAN {key} = null", _file.Name);
             _keyValueSynchronizer.Dictionary.TryRemove(key, out _);
         }
 
@@ -186,7 +185,7 @@ namespace dotnetCampus.Configurations.Core
         /// <returns>可异步等待的对象。</returns>
         public async Task SaveAsync(int tryCount = 10)
         {
-            CT.Debug($"要求保存...", _file.Name);
+            CT.Log($"要求保存...", _file.Name);
 
             // 执行一次等待以便让代码中大量调用的同步（利用 PartialAwaitableRetry 的机制）共用同一个异步任务，节省资源。
             // 副作用是会慢一拍。
@@ -203,7 +202,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         public async Task ReloadExternalChangesAsync()
         {
-            CT.Debug($"强制重新读取文件...", _file.Name);
+            CT.Log($"强制重新读取文件...", _file.Name);
             // 如果之前正在读取文件，则等待文件读取完成。
             await _currentReadingFileTask.ConfigureAwait(false);
             // 现在，强制要求重新读取文件。
@@ -221,12 +220,12 @@ namespace dotnetCampus.Configurations.Core
         {
             if (_keyValueSynchronizer.DangerousCheckIfThisFileChangeIsFromSelf())
             {
-                CT.Debug($"忽略本进程导致的文件改变...", _file.Name);
+                CT.Log($"忽略本进程导致的文件改变...", _file.Name);
                 return;
             }
             else
             {
-                CT.Debug($"检测到文件被改变...", _file.Name);
+                CT.Log($"检测到文件被改变...", _file.Name);
             }
 
             var isPending = _isPendingReload;
@@ -268,7 +267,7 @@ namespace dotnetCampus.Configurations.Core
         private async Task<OperationResult> LoopSyncTask(PartialRetryContext context)
         {
             context.StepCount = 10;
-            CT.Debug($"等待同步...", _file.Name);
+            CT.Log($"等待同步...", _file.Name);
             _keyValueSynchronizer.Synchronize();
             Interlocked.Increment(ref _syncWaitingCount);
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
@@ -290,7 +289,7 @@ namespace dotnetCampus.Configurations.Core
                 await _currentReadingFileTask.ConfigureAwait(false);
             }
 
-            CT.Debug($"申请同步...", _file.Name);
+            CT.Log($"申请同步...", _file.Name);
             await _saveLoop.JoinAsync(tryCount);
         }
     }
