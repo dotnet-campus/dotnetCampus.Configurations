@@ -204,7 +204,14 @@ namespace dotnetCampus.Configurations.Concurrent
             else
             {
                 // 文件已经发生了更改。
-                CT.Debug($"准备同步时，发现文件时间改变 {_fileLastWriteTime.LocalDateTime:O} -> {lastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
+                if (_file.Exists)
+                {
+                    CT.Debug($"准备同步时，发现文件时间改变 {_fileLastWriteTime.LocalDateTime:O} -> {lastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
+                }
+                else
+                {
+                    CT.Debug($"准备同步时，发现文件不存在", _file.Name, "Sync");
+                }
                 newLastWriteTime = SyncWhenFileHasBeenUpdated(context, lastWriteTime);
             }
             if (lastWriteTime != newLastWriteTime.UtcDateTime)
@@ -280,13 +287,21 @@ namespace dotnetCampus.Configurations.Concurrent
 
         private string ReadAllText()
         {
-            CT.Debug($"正在读取文件...", _file.Name, "Sync");
-            using var fs = new FileStream(
-                _file.FullName, FileMode.OpenOrCreate,
-                FileAccess.ReadWrite, FileShare.None,
-                0x1000, FileOptions.SequentialScan | FileOptions.WriteThrough);
-            using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
-            return reader.ReadToEnd();
+            if (_file.Exists)
+            {
+                CT.Debug($"正在读取文件...", _file.Name, "Sync");
+                using var fs = new FileStream(
+                    _file.FullName, FileMode.OpenOrCreate,
+                    FileAccess.ReadWrite, FileShare.None,
+                    0x1000, FileOptions.SequentialScan | FileOptions.WriteThrough);
+                using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
+                return reader.ReadToEnd();
+            }
+            else
+            {
+                CT.Debug($"文件不存在，无需读取...", _file.Name, "Sync");
+                return "";
+            }
         }
 
         private void WriteAllText(string text)
