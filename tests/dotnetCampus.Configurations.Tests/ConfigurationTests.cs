@@ -23,7 +23,7 @@ namespace dotnetCampus.Configurations.Tests
                     (key, value) => dictionary[key] = value);
                 var fake = configuration.Of<DebugConfiguration>();
 
-                // Action
+                // Act
                 var isTested = fake.IsTested;
                 var amount = fake.Amount;
                 var offsetX = fake.OffsetX;
@@ -46,7 +46,7 @@ namespace dotnetCampus.Configurations.Tests
                 //Assert.AreEqual(null, color);
                 Assert.AreEqual(0, dictionary.Count);
 
-                // Action
+                // Act
                 fake.IsTested = true;
                 fake.Amount = 123.51243634523452345123514251m;
                 fake.OffsetX = 100;
@@ -76,7 +76,7 @@ namespace dotnetCampus.Configurations.Tests
                 //Assert.AreEqual("10,20,200,100", dictionary["Debug.Bounds"]);
                 //Assert.AreEqual("#FF008080", dictionary["Debug.Color"]);
 
-                // Action
+                // Act
                 //fake.Bounds = new Rect(10, 20, 100, 200);
                 //Assert.AreEqual(null, dictionary["Debug.Bounds"]);
             });
@@ -86,7 +86,7 @@ namespace dotnetCampus.Configurations.Tests
                 // Arrange
                 var configuration = new DebugConfiguration();
 
-                // Action & Assert
+                // Act & Assert
                 // ReSharper disable once ExplicitCallerInfoArgument
                 Assert.ThrowsException<InvalidOperationException>(() => configuration.GetValue("Foo"));
                 // ReSharper disable once ExplicitCallerInfoArgument
@@ -102,7 +102,7 @@ namespace dotnetCampus.Configurations.Tests
                     (key, value) => dictionary[key] = value);
                 var @default = configuration.Default;
 
-                // Action
+                // Act
                 string defaultFoo = @default["Foo"];
                 @default["Foo"] = "Bar";
 
@@ -118,7 +118,7 @@ namespace dotnetCampus.Configurations.Tests
                 // ReSharper disable once RedundantArgumentDefaultValue
                 var configuration = CreateConfiguration(null, null);
 
-                // Action
+                // Act
                 var @default0 = configuration.Of<DefaultConfiguration>();
                 var @default1 = configuration.Of<DefaultConfiguration>();
 
@@ -132,7 +132,7 @@ namespace dotnetCampus.Configurations.Tests
                 var configuration = CreateConfiguration();
                 var @default = configuration.Default;
 
-                // Action & Assert
+                // Act & Assert
                 @default["Foo"] = null;
             });
 
@@ -145,7 +145,7 @@ namespace dotnetCampus.Configurations.Tests
                     (key, value) => dictionary[key] = value);
                 var fake = configuration.Of<DebugConfiguration>();
 
-                // Action
+                // Act
                 fake.OffsetX = null;
 
                 // Assert
@@ -162,7 +162,7 @@ namespace dotnetCampus.Configurations.Tests
                 var configuration = CreateConfiguration(key => string.Empty);
                 var fake = configuration.Of<DebugConfiguration>();
 
-                // Action
+                // Act
                 var host = fake.Host;
 
                 // Assert
@@ -183,7 +183,7 @@ namespace dotnetCampus.Configurations.Tests
                     keyFilter => RemoveKeys(dictionary, keyFilter));
                 dictionary["遗留项"] = "随便";
 
-                // Action
+                // Act
                 var fake = configuration.Of<DebugConfiguration>();
                 fake.Length = 100;
                 fake.Count = 2;
@@ -191,7 +191,7 @@ namespace dotnetCampus.Configurations.Tests
                 // Assert
                 Assert.AreEqual(3, dictionary.Count);
 
-                // Action
+                // Act
                 fake.Clear();
 
                 // Assert

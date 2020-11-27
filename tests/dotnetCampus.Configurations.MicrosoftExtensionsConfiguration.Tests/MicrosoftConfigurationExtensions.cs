@@ -21,7 +21,7 @@ namespace dotnetCampus.Configurations.MicrosoftExtensionsConfiguration.Tests
 
                 IConfigurationBuilder builder = new ConfigurationBuilder();
 
-                // Action
+                // Act
                 var appConfigurator = builder.ToAppConfigurator();
                 appConfigurator.Default[key] = value;
 
@@ -50,7 +50,7 @@ namespace dotnetCampus.Configurations.MicrosoftExtensionsConfiguration.Tests
                 IConfigurationProvider configurationProvider=new MemoryConfigurationProvider(memoryConfigurationSource);
                 IConfiguration configuration = new ConfigurationRoot(new List<IConfigurationProvider>(){ configurationProvider });
 
-                // Action
+                // Act
                 var appConfigurator = configuration.ToAppConfigurator();
                 var configurationValue = appConfigurator.Default[key];
 

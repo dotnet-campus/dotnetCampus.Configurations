@@ -14,7 +14,7 @@ namespace dotnetCampus.Configurations.Tests
                 // Arrange
                 var coin = TestUtil.GetTempFile("configs.sim.coin");
 
-                // Action
+                // Act
                 var configs = DefaultConfiguration.FromFile(coin.FullName);
 
                 // Assert
