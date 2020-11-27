@@ -14,7 +14,7 @@ namespace dotnetCampus.Configurations.Utils
         /// </summary>
         /// <param name="message">消息。</param>
         /// <param name="tags">消息标签（用于分类）。</param>
-        [Conditional("UNITTEST")]
+        //[Conditional("UNITTEST")]
         internal static void Log(string message, params string[] tags)
         {
             var text = $"[{DateTime.Now:O}] {string.Join(" ", tags.Select(x => $"[{x}]"))} {message}";

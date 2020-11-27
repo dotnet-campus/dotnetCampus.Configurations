@@ -237,13 +237,14 @@ namespace dotnetCampus.Configurations.Concurrent
             _lastSyncedFileContent = text;
 
             // 将文件中的键值集合与内存中的键值集合合并。
-            var newText = MergeFileTextAndKeyValueText(context, lastWriteTime, _lastSyncedFileContent,
+            var newText = MergeFileTextAndKeyValueText(context, lastWriteTime, text,
                 out var updatedTime, out var hasChanged);
 
             // 将合并后的键值集合写回文件。
             if (hasChanged)
             {
                 WriteAllText(newText);
+                _lastSyncedFileContent = newText;
                 return updatedTime;
             }
             else
@@ -287,13 +288,14 @@ namespace dotnetCampus.Configurations.Concurrent
         {
             if (_file.Exists)
             {
-                CT.Log($"正在读取文件...", _file.Name, "Sync");
                 using var fs = new FileStream(
                     _file.FullName, FileMode.OpenOrCreate,
                     FileAccess.ReadWrite, FileShare.None,
                     0x1000, FileOptions.SequentialScan | FileOptions.WriteThrough);
                 using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
-                return reader.ReadToEnd();
+                var text = reader.ReadToEnd();
+                CT.Log($"正在读取文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
+                return text;
             }
             else
             {
@@ -304,7 +306,7 @@ namespace dotnetCampus.Configurations.Concurrent
 
         private void WriteAllText(string text)
         {
-            CT.Log($"正在写入文件...", _file.Name, "Sync");
+            CT.Log($"正在写入文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
             using var fileStream = new FileStream(
                 _file.FullName, FileMode.OpenOrCreate,
                 FileAccess.Write, FileShare.None,
@@ -335,6 +337,7 @@ namespace dotnetCampus.Configurations.Concurrent
             {
                 hasChanged = !string.Equals(text, newText, StringComparison.Ordinal);
             }
+            CT.Log($"合并键值集合：从文件 {{ {string.Join(", ", externalKeyValues.Keys)} }} 到新 {{ {string.Join(", ", mergedKeyValues.Keys)} }}", _file.Name, "Sync");
             return newText;
         }
 
