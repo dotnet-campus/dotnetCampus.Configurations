@@ -217,7 +217,9 @@ namespace dotnetCampus.Configurations.Concurrent
                 CT.Log($"正在更新文件时间 {lastWriteTime.LocalDateTime:O} -> {newLastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
                 _file.LastWriteTimeUtc = newLastWriteTime.UtcDateTime;
             }
-            _fileLastWriteTime = newLastWriteTime;
+            // 重新更新文件的信息，因为前面可能发生了更改。
+            _file.Refresh();
+            _fileLastWriteTime = _file.Exists ? newLastWriteTime : DateTimeOffset.MinValue;
         }
 
         /// <summary>
