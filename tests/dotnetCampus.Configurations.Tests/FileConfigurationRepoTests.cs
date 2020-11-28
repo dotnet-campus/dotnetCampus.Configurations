@@ -175,19 +175,19 @@ namespace dotnetCampus.Configurations.Tests
                 Assert.IsFalse(File.Exists(coin.FullName));
             });
 
-            //"如果没有文件但需要存储数据，那么会创建文件。".Test(async () =>
-            //{
-            //    // Arrange
-            //    var coin = TestUtil.GetTempFile(null, ".coin");
-            //    var repo = CreateIndependentRepo(coin);
+            "如果没有文件但需要存储数据，那么会创建文件。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile(null, ".coin");
+                var repo = CreateIndependentRepo(coin);
 
-            //    // Act
-            //    await repo.WriteAsync("Test.Create", "True").ConfigureAwait(false);
-            //    await repo.SaveAsync().ConfigureAwait(false);
+                // Act
+                await repo.WriteAsync("Test.Create", "True").ConfigureAwait(false);
+                await repo.SaveAsync().ConfigureAwait(false);
 
-            //    // Assert
-            //    Assert.IsTrue(File.Exists(coin.FullName));
-            //});
+                // Assert
+                Assert.IsTrue(File.Exists(coin.FullName));
+            });
         }
 
         [ContractTestCase]
@@ -380,7 +380,7 @@ NewValue
 
                 try
                 {
-                    Assert.AreEqual(2, repo.FileSyncingCount);
+                    AssertFileSyncingCount(repo, 2, 3);
                     Assert.AreEqual(0, repo.FileSyncingErrorCount);
                     //Assert.AreEqual(0, repo.SyncWaitingCount);
                 }
@@ -402,7 +402,7 @@ NewValue
 
                 try
                 {
-                    Assert.AreEqual(2, repo.FileSyncingCount);
+                    AssertFileSyncingCount(repo, 2, 3);
                     Assert.AreEqual(0, repo.FileSyncingErrorCount);
                     //Assert.AreEqual(0, repo.SyncWaitingCount);
                 }
@@ -411,6 +411,26 @@ NewValue
                     Debug.WriteLine(FormatSyncingCount(repo));
                 }
             });
+        }
+
+        /// <summary>
+        /// 断言文件同步次数。
+        /// </summary>
+        /// <param name="repo">配置仓库。</param>
+        /// <param name="countForHighResolutionFileSystem">在支持高精度时间的文件系统上的同步次数（严格相等）。</param>
+        /// <param name="countForOtherFileSystems">在不支持高精度时间的文件系统上的同步次数（不大于此值）。</param>
+        private static void AssertFileSyncingCount(FileConfigurationRepo repo, int countForHighResolutionFileSystem, int countForOtherFileSystems)
+        {
+            if (repo.SupportsHighResolutionFileTime)
+            {
+                // 支持高精度时间的文件系统上，同步次数固定。
+                Assert.AreEqual(countForHighResolutionFileSystem, repo.FileSyncingCount);
+            }
+            else
+            {
+                // 在不支持高精度时间的文件系统上，同步次数不大于值（多出的一次是因为并发时机发生时，无法确定文件的新旧）。
+                Assert.IsTrue(repo.FileSyncingCount <= countForOtherFileSystems);
+            }
         }
 
         /// <summary>

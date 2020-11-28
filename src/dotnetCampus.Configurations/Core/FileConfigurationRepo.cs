@@ -114,6 +114,12 @@ namespace dotnetCampus.Configurations.Core
         public int SyncWaitingCount => _syncWaitingCount;
 
         /// <summary>
+        /// 如果此文件所在的分区支持高精度时间，则此值为 true，否则为 false。
+        /// 当此值为 false 时，将不能依赖于时间判定文件内容的改变；当为 true 时，大概率可以依赖时间来判定文件内容的改变。
+        /// </summary>
+        public bool SupportsHighResolutionFileTime => _keyValueSynchronizer.SupportsHighResolutionFileTime;
+
+        /// <summary>
         /// 获取所有目前已经存储的 Key 的集合。
         /// </summary>
         protected override ICollection<string> GetKeys() => _keyValueSynchronizer.Dictionary.Keys;

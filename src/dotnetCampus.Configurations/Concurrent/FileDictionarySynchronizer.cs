@@ -48,12 +48,6 @@ namespace dotnetCampus.Configurations.Concurrent
         private readonly FileEqualsComparison _fileEqualsComparison;
 
         /// <summary>
-        /// 如果此文件所在的分区支持高精度时间，则此值为 true，否则为 false。
-        /// 当此值为 false 时，将不能依赖于时间判定文件内容的改变；当为 true 时，大概率可以依赖时间来判定文件内容的改变。
-        /// </summary>
-        private readonly bool _supportHighResolutionFileTime;
-
-        /// <summary>
         /// 上次同步文件时，文件的修改时间。如果时间相同，我们就认为文件没有更改过。
         /// </summary>
         private DateTimeOffset _fileLastWriteTime = DateTimeOffset.MinValue;
@@ -68,6 +62,18 @@ namespace dotnetCampus.Configurations.Concurrent
 
         [ContractPublicPropertyName(nameof(FileSyncingErrorCount))]
         private volatile int _fileSyncingErrorCount;
+
+        /// <summary>
+        /// 获取或设置当前是否正处在进程安全的同步文件的代码片段。
+        /// 如果此值为 true，说明期间的文件读写只可能来自于本进程。
+        /// </summary>
+        private bool _isInSyncingArea;
+
+        /// <summary>
+        /// 延迟反映 <see cref="_isInSyncingArea"/> 值的变化。
+        /// <see cref="_isInSyncingArea"/> 值明确表示进程安全区的变化，但 <see cref="_hasCheckedFileChange"/> 在每一次安全区执行结束后，在 <see cref="DangerousCheckIfThisFileChangeIsFromSelf"/> 调用前都将保持 true。
+        /// </summary>
+        private bool _hasCheckedFileChange;
 
         /// <summary>
         /// 创建 <see cref="FileDictionarySynchronizer{TKey, TValue}"/> 的新实例，这个实例将帮助同步一个文件和一个内存中的跨进程安全的字典。
@@ -89,26 +95,27 @@ namespace dotnetCampus.Configurations.Concurrent
             try
             {
                 var drive = new DriveInfo(file.FullName);
-                _supportHighResolutionFileTime = KnownHighResolutionDriveFormats.Contains(drive.DriveFormat);
+                FileDriveFormat = drive.DriveFormat;
+                SupportsHighResolutionFileTime = KnownHighResolutionDriveFormats.Contains(FileDriveFormat);
             }
             catch (Exception)
             {
                 // 可能连本地驱动器都不是。
-                _supportHighResolutionFileTime = false;
+                FileDriveFormat = default;
+                SupportsHighResolutionFileTime = false;
             }
         }
 
         /// <summary>
-        /// 获取或设置当前是否正处在进程安全的同步文件的代码片段。
-        /// 如果此值为 true，说明期间的文件读写只可能来自于本进程。
+        /// 如果此文件所在的分区支持高精度时间，则此值为 true，否则为 false。
+        /// 当此值为 false 时，将不能依赖于时间判定文件内容的改变；当为 true 时，大概率可以依赖时间来判定文件内容的改变。
         /// </summary>
-        private bool _isInSyncingArea;
+        public bool SupportsHighResolutionFileTime { get; }
 
         /// <summary>
-        /// 延迟反映 <see cref="_isInSyncingArea"/> 值的变化。
-        /// <see cref="_isInSyncingArea"/> 值明确表示进程安全区的变化，但 <see cref="_hasCheckedFileChange"/> 在每一次安全区执行结束后，在 <see cref="DangerousCheckIfThisFileChangeIsFromSelf"/> 调用前都将保持 true。
+        /// 此文件所在的文件系统。
         /// </summary>
-        private bool _hasCheckedFileChange;
+        public string? FileDriveFormat { get; }
 
         /// <summary>
         /// 获取此配置与文件同步的总尝试次数（包含失败的尝试）。
@@ -192,7 +199,7 @@ namespace dotnetCampus.Configurations.Concurrent
             var utcNow = DateTimeOffset.UtcNow;
             var lastWriteTime = _file.Exists ? FixFileTime(_file.LastWriteTimeUtc, utcNow) : utcNow;
             DateTimeOffset newLastWriteTime;
-            if (_supportHighResolutionFileTime && lastWriteTime == _fileLastWriteTime)
+            if (SupportsHighResolutionFileTime && lastWriteTime == _fileLastWriteTime)
             {
                 // 在支持高精度时间的文件系统上：
                 // 自上次同步文件以来，文件从未发生过更改（无需提前打开文件）。
@@ -204,7 +211,14 @@ namespace dotnetCampus.Configurations.Concurrent
                 // 文件已经发生了更改。
                 if (_file.Exists)
                 {
-                    CT.Log($"准备同步时，发现文件时间改变 {_fileLastWriteTime.LocalDateTime:O} -> {lastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
+                    if (SupportsHighResolutionFileTime)
+                    {
+                        CT.Log($"准备同步时（{FileDriveFormat}），发现文件时间改变 {_fileLastWriteTime.LocalDateTime:O} -> {lastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
+                    }
+                    else
+                    {
+                        CT.Log($"准备同步时，发现文件系统（{FileDriveFormat ?? "null"}）不支持高精度时间，强制完全同步 {lastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
+                    }
                 }
                 else
                 {
