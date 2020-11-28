@@ -83,11 +83,7 @@ namespace dotnetCampus.Configurations.Core
 
             // 监视文件改变。
             _watcher = new FileWatcher(_file);
-            _currentReadingFileTask = Task.Run(() =>
-            {
-                CT.Log($"首次同步...", _file.Name);
-                _keyValueSynchronizer.Synchronize();
-            });
+            _currentReadingFileTask = FastSynchronizeAsync();
             _watcher.Changed += OnFileChanged;
             _ = _watcher.WatchAsync();
         }
@@ -206,7 +202,7 @@ namespace dotnetCampus.Configurations.Core
             // 如果之前正在读取文件，则等待文件读取完成。
             await _currentReadingFileTask.ConfigureAwait(false);
             // 现在，强制要求重新读取文件。
-            _currentReadingFileTask = SynchronizeAsync();
+            _currentReadingFileTask = FastSynchronizeAsync();
             // 然后，等待重新读取完成。
             await _currentReadingFileTask.ConfigureAwait(false);
         }
@@ -273,6 +269,16 @@ namespace dotnetCampus.Configurations.Core
             await Task.Delay(DelaySaveTime).ConfigureAwait(false);
             return true;
         }
+
+        /// <summary>
+        /// 省去任何中间等待环节，立即开始同步（但为了安全，无法省去进程安全区的等待）。
+        /// </summary>
+        /// <returns>可等待对象。</returns>
+        private Task FastSynchronizeAsync() => Task.Run(() =>
+        {
+            CT.Log($"立即同步...", _file.Name);
+            _keyValueSynchronizer.Synchronize();
+        });
 
         /// <summary>
         /// 请求将文件与内存模型进行同步。
