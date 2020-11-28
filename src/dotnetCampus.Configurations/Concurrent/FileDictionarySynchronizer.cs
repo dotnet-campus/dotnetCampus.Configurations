@@ -8,8 +8,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 
-using CT = dotnetCampus.Configurations.Core.ConfigTracer;
-
 namespace dotnetCampus.Configurations.Concurrent
 {
     /// <summary>
@@ -160,7 +158,7 @@ namespace dotnetCampus.Configurations.Concurrent
             Dictionary.UpdateValuesFromExternal(_file, context =>
             {
                 // 此处代码是跨进程安全的。
-                CT.Debug($"正在同步，已进入进程安全区...", _file.Name);
+                CT.Log($"正在同步，已进入进程安全区...", _file.Name);
                 try
                 {
                     _isInSyncingArea = true;
@@ -177,7 +175,7 @@ namespace dotnetCampus.Configurations.Concurrent
                 finally
                 {
                     _isInSyncingArea = false;
-                    CT.Debug($"正在同步，已退出进程安全区...", _file.Name);
+                    CT.Log($"正在同步，已退出进程安全区...", _file.Name);
                 }
             });
         }
@@ -198,7 +196,7 @@ namespace dotnetCampus.Configurations.Concurrent
             {
                 // 在支持高精度时间的文件系统上：
                 // 自上次同步文件以来，文件从未发生过更改（无需提前打开文件）。
-                CT.Debug($"准备同步时，发现文件时间未改变 {_fileLastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
+                CT.Log($"准备同步时，发现文件时间未改变 {_fileLastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
                 newLastWriteTime = SyncWhenFileHasNotBeenUpdated(context, lastWriteTime);
             }
             else
@@ -206,20 +204,22 @@ namespace dotnetCampus.Configurations.Concurrent
                 // 文件已经发生了更改。
                 if (_file.Exists)
                 {
-                    CT.Debug($"准备同步时，发现文件时间改变 {_fileLastWriteTime.LocalDateTime:O} -> {lastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
+                    CT.Log($"准备同步时，发现文件时间改变 {_fileLastWriteTime.LocalDateTime:O} -> {lastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
                 }
                 else
                 {
-                    CT.Debug($"准备同步时，发现文件不存在", _file.Name, "Sync");
+                    CT.Log($"准备同步时，发现文件不存在", _file.Name, "Sync");
                 }
                 newLastWriteTime = SyncWhenFileHasBeenUpdated(context, lastWriteTime);
             }
             if (lastWriteTime != newLastWriteTime.UtcDateTime)
             {
-                CT.Debug($"正在更新文件时间 {lastWriteTime.LocalDateTime:O} -> {newLastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
+                CT.Log($"正在更新文件时间 {lastWriteTime.LocalDateTime:O} -> {newLastWriteTime.LocalDateTime:O}", _file.Name, "Sync");
                 _file.LastWriteTimeUtc = newLastWriteTime.UtcDateTime;
             }
-            _fileLastWriteTime = newLastWriteTime;
+            // 重新更新文件的信息，因为前面可能发生了更改。
+            _file.Refresh();
+            _fileLastWriteTime = _file.Exists ? newLastWriteTime : DateTimeOffset.MinValue;
         }
 
         /// <summary>
@@ -239,13 +239,14 @@ namespace dotnetCampus.Configurations.Concurrent
             _lastSyncedFileContent = text;
 
             // 将文件中的键值集合与内存中的键值集合合并。
-            var newText = MergeFileTextAndKeyValueText(context, lastWriteTime, _lastSyncedFileContent,
+            var newText = MergeFileTextAndKeyValueText(context, lastWriteTime, text,
                 out var updatedTime, out var hasChanged);
 
             // 将合并后的键值集合写回文件。
             if (hasChanged)
             {
                 WriteAllText(newText);
+                _lastSyncedFileContent = newText;
                 return updatedTime;
             }
             else
@@ -289,24 +290,25 @@ namespace dotnetCampus.Configurations.Concurrent
         {
             if (_file.Exists)
             {
-                CT.Debug($"正在读取文件...", _file.Name, "Sync");
                 using var fs = new FileStream(
                     _file.FullName, FileMode.OpenOrCreate,
                     FileAccess.ReadWrite, FileShare.None,
                     0x1000, FileOptions.SequentialScan | FileOptions.WriteThrough);
                 using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
-                return reader.ReadToEnd();
+                var text = reader.ReadToEnd();
+                CT.Log($"正在读取文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
+                return text;
             }
             else
             {
-                CT.Debug($"文件不存在，无需读取...", _file.Name, "Sync");
+                CT.Log($"文件不存在，无需读取...", _file.Name, "Sync");
                 return "";
             }
         }
 
         private void WriteAllText(string text)
         {
-            CT.Debug($"正在写入文件...", _file.Name, "Sync");
+            CT.Log($"正在写入文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
             using var fileStream = new FileStream(
                 _file.FullName, FileMode.OpenOrCreate,
                 FileAccess.Write, FileShare.None,
@@ -337,6 +339,7 @@ namespace dotnetCampus.Configurations.Concurrent
             {
                 hasChanged = !string.Equals(text, newText, StringComparison.Ordinal);
             }
+            CT.Log($"合并键值集合：从文件 {{ {string.Join(", ", externalKeyValues.Keys)} }} 到新 {{ {string.Join(", ", mergedKeyValues.Keys)} }}", _file.Name, "Sync");
             return newText;
         }
 

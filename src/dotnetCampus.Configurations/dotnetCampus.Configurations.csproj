@@ -14,6 +14,11 @@
     <RepositoryUrl>https://github.com/dotnet-campus/dotnetCampus.Configurations.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Configurations>Debug;Release;UnitTest</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'UnitTest' ">
+    <DefineConstants>$(DefineConstants);UNITTEST</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
