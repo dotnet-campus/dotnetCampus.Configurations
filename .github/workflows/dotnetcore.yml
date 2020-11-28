@@ -12,4 +12,4 @@ jobs:
     - name: Build with dotnet
       run: dotnet build --configuration Release
     - name: Test
-      run: dotnet test --configuration UnitTest --no-build -l "console;verbosity=detailed"
+      run: dotnet test --configuration UnitTest -l "console;verbosity=detailed" --no-build
