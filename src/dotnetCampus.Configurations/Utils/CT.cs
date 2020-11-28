@@ -18,7 +18,7 @@ namespace dotnetCampus.Configurations.Utils
         internal static void Log(string message, params string[] tags)
         {
             var text = $"[{DateTime.Now:O}] {string.Join(" ", tags.Select(x => $"[{x}]"))} {message}";
-            Debug.WriteLine(text);
+            Console.WriteLine(text);
         }
     }
 }
