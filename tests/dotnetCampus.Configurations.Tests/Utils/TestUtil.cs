@@ -11,7 +11,7 @@ namespace dotnetCampus.Configurations.Tests.Utils
     /// 为需要清理的单元测试提供辅助工具。
     /// </summary>
     [TestClass]
-    internal static class TestUtil
+    public static class TestUtil
     {
         private static readonly ConcurrentDictionary<string, FileInfo> AllTempFiles = new ConcurrentDictionary<string, FileInfo>(StringComparer.OrdinalIgnoreCase);
 
