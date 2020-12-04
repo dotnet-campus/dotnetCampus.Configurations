@@ -110,19 +110,10 @@ namespace dotnetCampus.Configurations.Converters
         /// <param name="this">需要设置非基本类型值的配置项组。</param>
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
+        [Obsolete("请改用 DateTimeOffset 类型，因为 DateTime 在存储和传输过程中会丢失时区信息导致值在读写后发生变化。")]
         public static void SetValue(this Configuration @this,
             DateTime value, [CallerMemberName] string? key = null)
             => SetValueCore(@this, key, value.ToString("O", CultureInfo.InvariantCulture));
-
-        /// <summary>
-        /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
-        /// </summary>
-        /// <param name="this">需要设置非基本类型值的配置项组。</param>
-        /// <param name="value">配置项的值。</param>
-        /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
-        public static void SetValue(this Configuration @this,
-            DateTime? value, [CallerMemberName] string? key = null)
-            => SetValueCore(@this, key, value?.ToString("O", CultureInfo.InvariantCulture));
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
