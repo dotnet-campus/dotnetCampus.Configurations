@@ -35,9 +35,21 @@ namespace dotnetCampus.Configurations.Tests.Fakes
             set => SetValue(value);
         }
 
+        public int Count2
+        {
+            get => GetInt32() ?? 0;
+            set => SetValue(value);
+        }
+
         public long? Length
         {
             get => GetInt64();
+            set => SetValue(value);
+        }
+
+        public long Length2
+        {
+            get => GetInt64() ?? 0L;
             set => SetValue(value);
         }
 
@@ -56,6 +68,12 @@ namespace dotnetCampus.Configurations.Tests.Fakes
         public MethodImplOptions MethodImpl
         {
             get => this.GetValue<MethodImplOptions>() ?? MethodImplOptions.AggressiveInlining;
+            set => this.SetValue(value);
+        }
+
+        public MethodImplOptions? MethodImpl2
+        {
+            get => this.GetValue<MethodImplOptions>();
             set => this.SetValue(value);
         }
 
