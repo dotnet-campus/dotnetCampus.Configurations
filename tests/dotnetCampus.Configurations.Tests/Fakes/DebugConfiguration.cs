@@ -1,4 +1,7 @@
-﻿namespace dotnetCampus.Configurations.Tests.Fakes
+﻿using System.Runtime.CompilerServices;
+using dotnetCampus.Configurations.Converters;
+
+namespace dotnetCampus.Configurations.Tests.Fakes
 {
     internal sealed class DebugConfiguration : Configuration
     {
@@ -48,6 +51,12 @@
         {
             get => GetString() ?? "https://localhost:17134";
             set => SetValue(value);
+        }
+
+        public MethodImplOptions MethodImpl
+        {
+            get => this.GetValue<MethodImplOptions>() ?? MethodImplOptions.AggressiveInlining;
+            set => this.SetValue(value);
         }
 
         //public Rect? Bounds

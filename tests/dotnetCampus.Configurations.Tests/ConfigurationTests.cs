@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using dotnetCampus.Configurations.Core;
 using dotnetCampus.Configurations.Tests.Fakes;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -32,6 +33,7 @@ namespace dotnetCampus.Configurations.Tests
                 var count = fake.Count;
                 var length = fake.Length;
                 var message = fake.Message;
+                var methodImpl = fake.MethodImpl;
                 //var bounds = fake.Bounds;
                 //var color = fake.Color;
 
@@ -43,6 +45,7 @@ namespace dotnetCampus.Configurations.Tests
                 Assert.AreEqual(null, count);
                 Assert.AreEqual(null, length);
                 Assert.AreEqual("", message);
+                Assert.AreEqual(MethodImplOptions.AggressiveInlining, methodImpl);
                 //Assert.AreEqual(new Rect(10, 20, 100, 200), bounds);
                 //Assert.AreEqual(null, color);
                 Assert.AreEqual(0, dictionary.Count);
@@ -55,6 +58,7 @@ namespace dotnetCampus.Configurations.Tests
                 fake.Count = 50;
                 fake.Length = 1230004132413241;
                 fake.Message = "ABC";
+                fake.MethodImpl = MethodImplOptions.NoInlining;
                 //fake.Bounds = new Rect(10, 20, 200, 100);
                 //fake.Color = Colors.Teal;
 
@@ -66,6 +70,7 @@ namespace dotnetCampus.Configurations.Tests
                 Assert.AreEqual(50, fake.Count);
                 Assert.AreEqual(1230004132413241, fake.Length);
                 Assert.AreEqual("ABC", fake.Message);
+                Assert.AreEqual(MethodImplOptions.NoInlining, fake.MethodImpl);
                 //Assert.AreEqual(new Rect(10, 20, 200, 100), fake.Bounds);
                 Assert.AreEqual("True", dictionary["Debug.IsTested"]);
                 Assert.AreEqual("123.51243634523452345123514251", dictionary["Debug.Amount"]);
@@ -74,6 +79,7 @@ namespace dotnetCampus.Configurations.Tests
                 Assert.AreEqual("50", dictionary["Debug.Count"]);
                 Assert.AreEqual("1230004132413241", dictionary["Debug.Length"]);
                 Assert.AreEqual("ABC", dictionary["Debug.Message"]);
+                Assert.AreEqual("NoInlining", dictionary["Debug.MethodImpl"]);
                 //Assert.AreEqual("10,20,200,100", dictionary["Debug.Bounds"]);
                 //Assert.AreEqual("#FF008080", dictionary["Debug.Color"]);
 

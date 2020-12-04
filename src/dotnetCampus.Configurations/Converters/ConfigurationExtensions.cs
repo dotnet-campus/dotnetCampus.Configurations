@@ -59,6 +59,17 @@ namespace dotnetCampus.Configurations.Converters
         /// <param name="this">需要设置非基本类型值的配置项组。</param>
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void SetValue<T>(this Configuration @this,
+            T value, [CallerMemberName] string? key = null) where T : struct
+            => SetValue(@this, (T?)value, key);
+
+        /// <summary>
+        /// 在派生类中为非基本类型属性的 set 访问器提供设置配置值的方法。
+        /// </summary>
+        /// <param name="this">需要设置非基本类型值的配置项组。</param>
+        /// <param name="value">配置项的值。</param>
+        /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         public static void SetValue<T>(this Configuration @this,
             T? value, [CallerMemberName] string? key = null) where T : struct
         {
