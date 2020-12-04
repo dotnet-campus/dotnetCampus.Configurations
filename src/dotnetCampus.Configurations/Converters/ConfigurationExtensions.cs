@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 
 namespace dotnetCampus.Configurations.Converters
@@ -101,6 +102,67 @@ namespace dotnetCampus.Configurations.Converters
 
                 @this.SetValue(convertedValue, key);
             }
+        }
+
+        /// <summary>
+        /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
+        /// </summary>
+        /// <param name="this">需要设置非基本类型值的配置项组。</param>
+        /// <param name="value">配置项的值。</param>
+        /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
+        public static void SetValue(this Configuration @this,
+            DateTime value, [CallerMemberName] string? key = null)
+            => SetValueCore(@this, key, value.ToString("O", CultureInfo.InvariantCulture));
+
+        /// <summary>
+        /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
+        /// </summary>
+        /// <param name="this">需要设置非基本类型值的配置项组。</param>
+        /// <param name="value">配置项的值。</param>
+        /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
+        public static void SetValue(this Configuration @this,
+            DateTime? value, [CallerMemberName] string? key = null)
+            => SetValueCore(@this, key, value?.ToString("O", CultureInfo.InvariantCulture));
+
+        /// <summary>
+        /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
+        /// </summary>
+        /// <param name="this">需要设置非基本类型值的配置项组。</param>
+        /// <param name="value">配置项的值。</param>
+        /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
+        public static void SetValue(this Configuration @this,
+            DateTimeOffset value, [CallerMemberName] string? key = null)
+            => SetValueCore(@this, key, value.ToString("O", CultureInfo.InvariantCulture));
+
+        /// <summary>
+        /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
+        /// </summary>
+        /// <param name="this">需要设置非基本类型值的配置项组。</param>
+        /// <param name="value">配置项的值。</param>
+        /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
+        public static void SetValue(this Configuration @this,
+            DateTimeOffset? value, [CallerMemberName] string? key = null)
+            => SetValueCore(@this, key, value?.ToString("O", CultureInfo.InvariantCulture));
+
+        /// <summary>
+        /// 在转换器的扩展方法中用于简化设置值的扩展方法。
+        /// </summary>
+        /// <param name="configs">需要设置非基本类型值的配置项组。</param>
+        /// <param name="key">配置项的标识符。</param>
+        /// <param name="value">已经转换好的字符串。</param>
+        private static void SetValueCore(Configuration configs, string? key, string? value)
+        {
+            if (configs == null)
+            {
+                throw new ArgumentNullException(nameof(configs));
+            }
+
+            if (key is null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
+
+            configs.SetValue(value, key);
         }
     }
 }

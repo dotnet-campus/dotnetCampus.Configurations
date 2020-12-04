@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using dotnetCampus.Configurations.Converters;
 
 namespace dotnetCampus.Configurations.Tests.Fakes
@@ -74,6 +75,18 @@ namespace dotnetCampus.Configurations.Tests.Fakes
         public MethodImplOptions? MethodImpl2
         {
             get => this.GetValue<MethodImplOptions>();
+            set => this.SetValue(value);
+        }
+
+        public DateTime DateTime
+        {
+            get => this.GetValue<DateTime>() ?? default;
+            set => this.SetValue(value);
+        }
+
+        public DateTimeOffset? DateTimeOffset
+        {
+            get => this.GetValue<DateTime>();
             set => this.SetValue(value);
         }
 
