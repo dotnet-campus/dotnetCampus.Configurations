@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using dotnetCampus.Configurations.Core;
 using dotnetCampus.Configurations.Tests.Fakes;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -30,8 +31,13 @@ namespace dotnetCampus.Configurations.Tests
                 var offsetX = fake.OffsetX;
                 var sizeX = fake.SizeX;
                 var count = fake.Count;
+                var count2 = fake.Count2;
                 var length = fake.Length;
+                var length2 = fake.Length2;
                 var message = fake.Message;
+                var methodImpl = fake.MethodImpl;
+                var dateTime = fake.DateTime;
+                var dateTimeOffset = fake.DateTimeOffset;
                 //var bounds = fake.Bounds;
                 //var color = fake.Color;
 
@@ -41,8 +47,13 @@ namespace dotnetCampus.Configurations.Tests
                 Assert.AreEqual(null, offsetX);
                 Assert.AreEqual(null, sizeX);
                 Assert.AreEqual(null, count);
+                Assert.AreEqual(0, count2);
                 Assert.AreEqual(null, length);
+                Assert.AreEqual(0L, length2);
                 Assert.AreEqual("", message);
+                Assert.AreEqual(MethodImplOptions.AggressiveInlining, methodImpl);
+                Assert.AreEqual(new DateTime(), dateTime);
+                Assert.AreEqual(null, dateTimeOffset);
                 //Assert.AreEqual(new Rect(10, 20, 100, 200), bounds);
                 //Assert.AreEqual(null, color);
                 Assert.AreEqual(0, dictionary.Count);
@@ -53,8 +64,13 @@ namespace dotnetCampus.Configurations.Tests
                 fake.OffsetX = 100;
                 fake.SizeX = 69.5f;
                 fake.Count = 50;
+                fake.Count2 = 50;
                 fake.Length = 1230004132413241;
+                fake.Length2 = 1230004132413241;
                 fake.Message = "ABC";
+                fake.MethodImpl = MethodImplOptions.NoInlining;
+                //fake.DateTime = new DateTime(2020, 12, 04, 16, 03, 49, 591, DateTimeKind.Local);
+                fake.DateTimeOffset = new DateTimeOffset(2020, 12, 04, 16, 03, 49, 591, TimeSpan.FromHours(8));
                 //fake.Bounds = new Rect(10, 20, 200, 100);
                 //fake.Color = Colors.Teal;
 
@@ -64,16 +80,25 @@ namespace dotnetCampus.Configurations.Tests
                 Assert.AreEqual(100, fake.OffsetX);
                 Assert.AreEqual(69.5f, fake.SizeX);
                 Assert.AreEqual(50, fake.Count);
+                Assert.AreEqual(50, fake.Count2);
                 Assert.AreEqual(1230004132413241, fake.Length);
+                Assert.AreEqual(1230004132413241, fake.Length2);
                 Assert.AreEqual("ABC", fake.Message);
+                //Assert.AreEqual(new DateTime(2020, 12, 04, 16, 03, 49, 591, DateTimeKind.Local), fake.DateTime);
+                Assert.AreEqual(new DateTimeOffset(2020, 12, 04, 16, 03, 49, 591, TimeSpan.FromHours(8)), fake.DateTimeOffset);
                 //Assert.AreEqual(new Rect(10, 20, 200, 100), fake.Bounds);
                 Assert.AreEqual("True", dictionary["Debug.IsTested"]);
                 Assert.AreEqual("123.51243634523452345123514251", dictionary["Debug.Amount"]);
                 Assert.AreEqual("100", dictionary["Debug.OffsetX"]);
                 Assert.AreEqual("69.5", dictionary["Debug.SizeX"]);
                 Assert.AreEqual("50", dictionary["Debug.Count"]);
+                Assert.AreEqual("50", dictionary["Debug.Count2"]);
                 Assert.AreEqual("1230004132413241", dictionary["Debug.Length"]);
+                Assert.AreEqual("1230004132413241", dictionary["Debug.Length2"]);
                 Assert.AreEqual("ABC", dictionary["Debug.Message"]);
+                Assert.AreEqual("NoInlining", dictionary["Debug.MethodImpl"]);
+                //Assert.AreEqual("2020-12-04T16:03:49.5910000Z", dictionary["Debug.DateTime"]);
+                Assert.AreEqual("2020-12-04T16:03:49.5910000+08:00", dictionary["Debug.DateTimeOffset"]);
                 //Assert.AreEqual("10,20,200,100", dictionary["Debug.Bounds"]);
                 //Assert.AreEqual("#FF008080", dictionary["Debug.Color"]);
 
