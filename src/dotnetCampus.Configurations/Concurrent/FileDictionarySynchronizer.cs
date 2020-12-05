@@ -307,7 +307,7 @@ namespace dotnetCampus.Configurations.Concurrent
                 using var fs = new FileStream(
                     _file.FullName, FileMode.Open,
                     FileAccess.Read, FileShare.None,
-                    0x1000, FileOptions.SequentialScan | FileOptions.WriteThrough);
+                    0x1000, FileOptions.SequentialScan);
                 using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
                 var text = reader.ReadToEnd();
                 CT.Log($"正在读取文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
