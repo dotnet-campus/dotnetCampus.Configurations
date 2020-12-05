@@ -305,8 +305,8 @@ namespace dotnetCampus.Configurations.Concurrent
             if (_file.Exists)
             {
                 using var fs = new FileStream(
-                    _file.FullName, FileMode.OpenOrCreate,
-                    FileAccess.ReadWrite, FileShare.None,
+                    _file.FullName, FileMode.Open,
+                    FileAccess.Read, FileShare.None,
                     0x1000, FileOptions.SequentialScan | FileOptions.WriteThrough);
                 using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
                 var text = reader.ReadToEnd();
