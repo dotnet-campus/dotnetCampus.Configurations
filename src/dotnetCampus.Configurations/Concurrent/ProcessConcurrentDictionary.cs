@@ -108,16 +108,16 @@ namespace dotnetCampus.Configurations.Concurrent
 
         public bool TryRemove(TKey key, out TValue value)
         {
-            if (_keyValues.TryRemove(key, out var entry))
-            {
-                value = entry.Value;
-                return true;
-            }
-            else
-            {
-                value = default;
-                return false;
-            }
+            var deletedValue = _keyValues.AddOrUpdate(
+               key,
+               // 如果当前不存在此值，则创建一个新值表示此值已删除（这样就不会再被同步回来）。
+               _ => CreateInternalDeletedValue(),
+               // 如果当前已存在此值，则创建根据外部值和此值的新旧比较后决定的值。
+               (_, existed) => CreateInternalDeletedValue(existed));
+            value = deletedValue.ExternalValue;
+            // 在进程安全的代码区间，由于移除只是值合并，所以根本不会出现真的值删除。
+            // 虽然这里的返回值无实际意义，但能让代码知道逻辑真的执行了。
+            return true;
         }
 
         private TimedKeyValues<TKey, TValue> UpdateValuesFromExternalCore(
@@ -139,7 +139,7 @@ namespace dotnetCampus.Configurations.Concurrent
             {
                 _keyValues.AddOrUpdate(key,
                     // 内存中无值，外部无值 —— 理论上不可能存在此情况。
-                    _ => CreateDeletedValue(externalUpdateTime),
+                    _ => CreateExternalDeletedValue(externalUpdateTime),
                     // 内存中有值，外部无值 —— 比较新旧后创建新值或创建删除值。
                     (_, existed) => CreateExternalLatestOrDeletedValue(existed, externalUpdateTime));
             }
@@ -179,6 +179,29 @@ namespace dotnetCampus.Configurations.Concurrent
                     existedEntry.ExternalValue,
                     DateTimeOffset.UtcNow,
                     ProcessSafeValueState.Changed);
+
+        /// <summary>
+        /// 创建一个由内部值新建的已删除的 <see cref="ProcessSafeValueEntry{TValue}"/>。
+        /// </summary>
+        /// <returns>进程安全的值。</returns>
+        private static ProcessSafeValueEntry<TValue> CreateInternalDeletedValue()
+            => new ProcessSafeValueEntry<TValue>(
+                default,
+                default,
+                DateTimeOffset.UtcNow,
+                ProcessSafeValueState.Deleted);
+
+        /// <summary>
+        /// 创建一个已删除的 <see cref="ProcessSafeValueEntry{TValue}"/>。由于当前时刻一定比任何外部值新，所以将无视外部值的更新时间。
+        /// </summary>
+        /// <param name="existedEntry">当前已经存在的值。</param>
+        /// <returns>进程安全的值。</returns>
+        private static ProcessSafeValueEntry<TValue> CreateInternalDeletedValue(ProcessSafeValueEntry<TValue> existedEntry)
+            => new ProcessSafeValueEntry<TValue>(
+                existedEntry.ExternalValue,
+                default,
+                DateTimeOffset.UtcNow,
+                ProcessSafeValueState.Deleted);
 
         /// <summary>
         /// 创建一个由外部值引入的 <see cref="ProcessSafeValueEntry{TValue}"/>。
@@ -232,7 +255,7 @@ namespace dotnetCampus.Configurations.Concurrent
         /// </summary>
         /// <param name="deletedTime">已知的最近删除时间。</param>
         /// <returns>进程安全的值。</returns>
-        private static ProcessSafeValueEntry<TValue> CreateDeletedValue(DateTimeOffset deletedTime)
+        private static ProcessSafeValueEntry<TValue> CreateExternalDeletedValue(DateTimeOffset deletedTime)
             => new ProcessSafeValueEntry<TValue>(
                 default,
                 default,

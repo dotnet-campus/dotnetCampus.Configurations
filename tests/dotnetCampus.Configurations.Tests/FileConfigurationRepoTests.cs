@@ -153,6 +153,23 @@ namespace dotnetCampus.Configurations.Tests
                 var str = await repo2.TryReadAsync("Foo.MultilineValue").ConfigureAwait(false);
                 Assert.AreEqual("1\n2\n3", str);
             });
+
+            "如果将值设置为默认值，则配置项会删除。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile("configs.sim.coin");
+                var repo = CreateIndependentRepo(coin);
+
+                // Act
+                var value = await repo.TryReadAsync("Test").ConfigureAwait(false);
+                Assert.AreEqual("True", value);
+                await repo.WriteAsync("Test", null).ConfigureAwait(false);
+                await repo.SaveAsync().ConfigureAwait(false);
+
+                // Assert
+                var value2 = await CreateIndependentRepo(coin).TryReadAsync("Test").ConfigureAwait(false);
+                Assert.AreEqual("", value2);
+            });
         }
 
         [ContractTestCase]
