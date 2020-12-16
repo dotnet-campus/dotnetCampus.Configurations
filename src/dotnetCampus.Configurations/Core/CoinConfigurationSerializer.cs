@@ -18,6 +18,11 @@ namespace dotnetCampus.Configurations.Core
         /// <returns></returns>
         private static string EscapeString(string str)
         {
+            if (str is null)
+            {
+                throw new ArgumentNullException(nameof(str));
+            }
+
             // 如果开头是 `>` 就需要转换为 `?>`
             // 开头是 `?` 转换为 `??`
 
@@ -42,7 +47,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         /// <param name="keyValue">要序列化的键值对字典。</param>
         /// <returns>序列化后的文本字符串。</returns>
-        public static string Serialize(IReadOnlyDictionary<string, string> keyValue)
+        public static string Serialize(IReadOnlyDictionary<string, string?> keyValue)
         {
             if (ReferenceEquals(keyValue, null)) throw new ArgumentNullException(nameof(keyValue));
             var keyValuePairList = keyValue.ToArray().OrderBy(p => p.Key);
@@ -55,7 +60,7 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         /// <param name="keyValue">要序列化的键值对字典。</param>
         /// <returns>序列化后的文本字符串。</returns>
-        public static string Serialize(Dictionary<string, string> keyValue)
+        public static string Serialize(Dictionary<string, string?> keyValue)
         {
             if (ReferenceEquals(keyValue, null)) throw new ArgumentNullException(nameof(keyValue));
             var keyValuePairList = keyValue.ToArray().OrderBy(p => p.Key);
@@ -63,7 +68,7 @@ namespace dotnetCampus.Configurations.Core
             return Serialize(keyValuePairList);
         }
 
-        private static string Serialize(IOrderedEnumerable<KeyValuePair<string, string>> keyValuePairList)
+        private static string Serialize(IOrderedEnumerable<KeyValuePair<string, string?>> keyValuePairList)
         {
             var str = new StringBuilder();
             str.Append("> 配置文件\n");
@@ -73,9 +78,9 @@ namespace dotnetCampus.Configurations.Core
             {
                 // str.AppendLine 在一些地区使用的是 \r\n 所以不符合反序列化
 
-                str.Append(EscapeString(temp.Key));
+                str.Append(EscapeString(temp.Key ?? ""));
                 str.Append("\n");
-                str.Append(EscapeString(temp.Value));
+                str.Append(EscapeString(temp.Value ?? ""));
                 str.Append("\n>\n");
             }
 
