@@ -220,6 +220,11 @@ namespace dotnetCampus.Configurations.Core
         /// <param name="e">空事件参数。</param>
         private async void OnFileChanged(object? sender, EventArgs e)
         {
+            await HandleFileChangedAsync().ConfigureAwait(false);
+        }
+
+        private async Task HandleFileChangedAsync()
+        {
             if (_keyValueSynchronizer.DangerousCheckIfThisFileChangeIsFromSelf())
             {
                 CT.Log($"忽略本进程导致的文件改变...", _file.Name);
