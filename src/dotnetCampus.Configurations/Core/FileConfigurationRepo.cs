@@ -218,9 +218,10 @@ namespace dotnetCampus.Configurations.Core
         /// </summary>
         /// <param name="sender"><see cref="FileWatcher"/>。</param>
         /// <param name="e">空事件参数。</param>
-        private async void OnFileChanged(object? sender, EventArgs e)
+        private void OnFileChanged(object? sender, EventArgs e)
         {
-            await HandleFileChangedAsync().ConfigureAwait(false);
+            // 使用弃元以忽略异常。
+            _ = HandleFileChangedAsync();
         }
 
         private async Task HandleFileChangedAsync()
