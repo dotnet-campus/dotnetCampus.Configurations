@@ -75,7 +75,9 @@ namespace dotnetCampus.Configurations.Core
             _file = new FileInfo(fullPath);
             _saveLoop = new PartialAwaitableRetry(LoopSyncTask);
             _keyValueSynchronizer = new FileDictionarySynchronizer<string, string>(_file,
+#pragma warning disable CS8620 // 由于引用类型的可为 null 性差异，实参不能用于形参。
                 x => CoinConfigurationSerializer.Serialize(x),
+#pragma warning restore CS8620 // 由于引用类型的可为 null 性差异，实参不能用于形参。
                 x => CoinConfigurationSerializer.Deserialize(x),
                 // 因为 COIN 格式的序列化器默认会写“文件头”，导致即使是构造函数也会和原始文件内容不同，于是会写入文件，导致写入次数比预期多一些。
                 // 所以，比较差异时使用 KeyValueEquals 而不是 WholeTextEquals，这可以在目前对注释不敏感的时候提升一些性能。
