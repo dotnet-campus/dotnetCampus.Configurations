@@ -220,7 +220,6 @@ namespace dotnetCampus.Configurations.Core
         /// <param name="e">空事件参数。</param>
         private void OnFileChanged(object? sender, EventArgs e)
         {
-            // 使用弃元以忽略异常。
             _ = HandleFileChangedAsync();
         }
 
