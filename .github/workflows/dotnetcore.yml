@@ -3,9 +3,31 @@ name: .NET Core
 on: [push]
 
 jobs:
-  build:
+  BuildAndTestOnWindows:
 
     runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build with dotnet
+      run: dotnet build --configuration Release
+    - name: Test
+      run: dotnet test --configuration UnitTest -l "console;verbosity=detailed" --no-build
+
+  BuildAndTestOnLinux:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build with dotnet
+      run: dotnet build --configuration Release
+    - name: Test
+      run: dotnet test --configuration UnitTest -l "console;verbosity=detailed" --no-build
+
+  BuildAndTestOnMac:
+    
+    runs-on: macos-latest
 
     steps:
     - uses: actions/checkout@v1
