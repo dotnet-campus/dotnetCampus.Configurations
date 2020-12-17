@@ -3,7 +3,7 @@ name: .NET Core
 on: [push]
 
 jobs:
-  build:
+  BuildAndTestOnWindows:
 
     runs-on: windows-latest
 
@@ -13,3 +13,21 @@ jobs:
       run: dotnet build --configuration Release
     - name: Test
       run: dotnet test --configuration UnitTest -l "console;verbosity=detailed" --no-build
+
+  TestOnLinux:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Test
+      run: dotnet test "tests/dotnetCampus.Configurations.Tests"  --configuration Release
+
+  TestOnMac:
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Test
+      run: dotnet test "tests/dotnetCampus.Configurations.Tests"  --configuration Release
