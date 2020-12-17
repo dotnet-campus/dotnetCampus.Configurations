@@ -50,7 +50,7 @@ namespace dotnetCampus.Threading
         /// <summary>
         /// 执行实际的循环，并在每一次执行的时候会给所有的等待对象报告结果。
         /// </summary>
-        private async void Loop()
+        private async Task Loop()
         {
             _isLooping = true;
 
