@@ -106,6 +106,7 @@ namespace dotnetCampus.Configurations.Converters
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
+        /// <para>说明：若要在 get 访问器中获取值，请使用 <see cref="GetValue{DateTime}(Configuration, string?)"/>。</para>
         /// </summary>
         /// <param name="this">需要设置非基本类型值的配置项组。</param>
         /// <param name="value">配置项的值。</param>
@@ -117,6 +118,7 @@ namespace dotnetCampus.Configurations.Converters
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
+        /// <para>说明：若要在 get 访问器中获取值，请使用 <see cref="GetValue{DateTimeOffset}(Configuration, string?)"/>。</para>
         /// </summary>
         /// <param name="this">需要设置非基本类型值的配置项组。</param>
         /// <param name="value">配置项的值。</param>
@@ -127,12 +129,35 @@ namespace dotnetCampus.Configurations.Converters
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
+        /// <para>说明：若要在 get 访问器中获取值，请使用 <see cref="GetValue{DateTimeOffset}(Configuration, string?)"/>。</para>
         /// </summary>
         /// <param name="this">需要设置非基本类型值的配置项组。</param>
         /// <param name="value">配置项的值。</param>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         public static void SetValue(this Configuration @this,
             DateTimeOffset? value, [CallerMemberName] string? key = null)
+            => SetValueCore(@this, key, value?.ToString("O", CultureInfo.InvariantCulture));
+
+        /// <summary>
+        /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
+        /// <para>说明：若要在 get 访问器中获取值，请使用 <see cref="GetValue{TimeSpan}(Configuration, string?)"/>。</para>
+        /// </summary>
+        /// <param name="this">需要设置非基本类型值的配置项组。</param>
+        /// <param name="value">配置项的值。</param>
+        /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
+        public static void SetValue(this Configuration @this,
+            TimeSpan value, [CallerMemberName] string? key = null)
+            => SetValueCore(@this, key, value.ToString("O", CultureInfo.InvariantCulture));
+
+        /// <summary>
+        /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
+        /// <para>说明：若要在 get 访问器中获取值，请使用 <see cref="GetValue{TimeSpan}(Configuration, string?)"/>。</para>
+        /// </summary>
+        /// <param name="this">需要设置非基本类型值的配置项组。</param>
+        /// <param name="value">配置项的值。</param>
+        /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
+        public static void SetValue(this Configuration @this,
+            TimeSpan? value, [CallerMemberName] string? key = null)
             => SetValueCore(@this, key, value?.ToString("O", CultureInfo.InvariantCulture));
 
         /// <summary>
