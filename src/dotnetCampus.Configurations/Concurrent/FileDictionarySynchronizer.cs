@@ -61,7 +61,7 @@ namespace dotnetCampus.Configurations.Concurrent
         /// </list>
         /// 我们认定，文件如果发生了存在状态的改变，则一定是更新的。这种假设是建立在“程序（本代码）不主动删文件”这个前提下的；如果删，只可能是用户干的。
         /// </summary>
-        private bool _lastFileExists;
+        private bool? _lastFileExists;
 
         /// <summary>
         /// 上次同步文件时，文件的全文内容。
@@ -206,6 +206,12 @@ namespace dotnetCampus.Configurations.Concurrent
             _file.Refresh();
             var utcNow = DateTimeOffset.UtcNow;
             var lastWriteTime = _file.Exists ? FixFileTime(_file.LastWriteTimeUtc, utcNow) : utcNow;
+            if (_file.Exists && _lastFileExists is false)
+            {
+                // 如果本此触发同步是因为文件新创建，那么无论此文件是新是旧，都视其为最新。
+                // 我们认定，如果文件上次不存在而这次存在，即使文件时间是旧的（例如用户从回收站将其恢复），我们也应该视其为最新。
+                lastWriteTime = utcNow;
+            }
             DateTimeOffset newLastWriteTime;
             if (SupportsHighResolutionFileTime && lastWriteTime == _fileLastWriteTime && _file.Exists == _lastFileExists)
             {
