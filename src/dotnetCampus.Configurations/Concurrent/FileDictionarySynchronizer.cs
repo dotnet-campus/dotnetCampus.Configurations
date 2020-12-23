@@ -53,6 +53,17 @@ namespace dotnetCampus.Configurations.Concurrent
         private DateTimeOffset _fileLastWriteTime = DateTimeOffset.MinValue;
 
         /// <summary>
+        /// 上次同步文件时，文件是否存在。
+        /// 使用此字段是为了解决以下问题：
+        /// <list type="number">
+        /// <item>先删除文件，这时我们发现文件被删了，记录下同步时间；</item>
+        /// <item>再将文件撤销回来，我们却发现文件时间比较旧，于是把这撤回来的文件覆盖了。</item>
+        /// </list>
+        /// 我们认定，文件如果发生了存在状态的改变，则一定是更新的。这种假设是建立在“程序（本代码）不主动删文件”这个前提下的；如果删，只可能是用户干的。
+        /// </summary>
+        private bool _lastFileExists;
+
+        /// <summary>
         /// 上次同步文件时，文件的全文内容。
         /// </summary>
         private string _lastSyncedFileContent = "";
@@ -196,7 +207,7 @@ namespace dotnetCampus.Configurations.Concurrent
             var utcNow = DateTimeOffset.UtcNow;
             var lastWriteTime = _file.Exists ? FixFileTime(_file.LastWriteTimeUtc, utcNow) : utcNow;
             DateTimeOffset newLastWriteTime;
-            if (SupportsHighResolutionFileTime && lastWriteTime == _fileLastWriteTime)
+            if (SupportsHighResolutionFileTime && lastWriteTime == _fileLastWriteTime && _file.Exists == _lastFileExists)
             {
                 // 在支持高精度时间的文件系统上：
                 // 自上次同步文件以来，文件从未发生过更改（无需提前打开文件）。
@@ -229,7 +240,7 @@ namespace dotnetCampus.Configurations.Concurrent
                 _file.LastWriteTimeUtc = newLastWriteTime.UtcDateTime;
             }
             // 重新更新文件的信息，因为前面可能发生了更改。
-            _file.Refresh();
+            _lastFileExists = _file.Exists;
             _fileLastWriteTime = _file.Exists ? newLastWriteTime : DateTimeOffset.MinValue;
         }
 
