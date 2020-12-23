@@ -64,14 +64,14 @@ namespace dotnetCampus.Configurations.Concurrent
         private volatile int _fileSyncingErrorCount;
 
         /// <summary>
-        /// 获取或设置当前是否正处在进程安全的同步文件的代码片段。
-        /// 如果此值为 true，说明期间的文件读写只可能来自于本进程。
+        /// 获取或设置当前是否正处在进程安全的写入文件的代码片段。
+        /// 如果此值为 true，说明期间的文件写入只可能来自于本进程。
         /// </summary>
-        private bool _isInSyncingArea;
+        private bool _isInWritingFileRegion;
 
         /// <summary>
-        /// 延迟反映 <see cref="_isInSyncingArea"/> 值的变化。
-        /// <see cref="_isInSyncingArea"/> 值明确表示进程安全区的变化，但 <see cref="_hasCheckedFileChange"/> 在每一次安全区执行结束后，在 <see cref="DangerousCheckIfThisFileChangeIsFromSelf"/> 调用前都将保持 true。
+        /// 延迟反映 <see cref="_isInWritingFileRegion"/> 值的变化。
+        /// <see cref="_isInWritingFileRegion"/> 值明确表示进程安全区的变化，但 <see cref="_hasCheckedFileChange"/> 在每一次安全区执行结束后，在 <see cref="DangerousCheckIfThisFileChangeIsFromSelf"/> 调用前都将保持 true。
         /// </summary>
         private bool _hasCheckedFileChange;
 
@@ -144,7 +144,7 @@ namespace dotnetCampus.Configurations.Concurrent
         /// <returns></returns>
         public bool DangerousCheckIfThisFileChangeIsFromSelf()
         {
-            if (_isInSyncingArea)
+            if (_isInWritingFileRegion)
             {
                 return true;
             }
@@ -168,8 +168,6 @@ namespace dotnetCampus.Configurations.Concurrent
                 CT.Log($"正在同步，已进入进程安全区...", _file.Name);
                 try
                 {
-                    _isInSyncingArea = true;
-                    _hasCheckedFileChange = true;
                     SynchronizeCore(context);
                     return;
                 }
@@ -181,7 +179,6 @@ namespace dotnetCampus.Configurations.Concurrent
                 }
                 finally
                 {
-                    _isInSyncingArea = false;
                     CT.Log($"正在同步，已退出进程安全区...", _file.Name);
                 }
             });
@@ -322,16 +319,26 @@ namespace dotnetCampus.Configurations.Concurrent
 
         private void WriteAllText(string text)
         {
-            CT.Log($"正在写入文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
-            using var fileStream = new FileStream(
-                _file.FullName, FileMode.OpenOrCreate,
-                FileAccess.Write, FileShare.None,
-                0x1000, FileOptions.WriteThrough);
-            using var writer = new StreamWriter(fileStream, new UTF8Encoding(false, false), 0x1000, true);
-            fileStream.Position = 0;
-            writer.Write(text);
-            writer.Flush();
-            fileStream.SetLength(fileStream.Position);
+            try
+            {
+                _isInWritingFileRegion = true;
+                _hasCheckedFileChange = true;
+
+                CT.Log($"正在写入文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
+                using var fileStream = new FileStream(
+                    _file.FullName, FileMode.OpenOrCreate,
+                    FileAccess.Write, FileShare.None,
+                    0x1000, FileOptions.WriteThrough);
+                using var writer = new StreamWriter(fileStream, new UTF8Encoding(false, false), 0x1000, true);
+                fileStream.Position = 0;
+                writer.Write(text);
+                writer.Flush();
+                fileStream.SetLength(fileStream.Position);
+            }
+            finally
+            {
+                _isInWritingFileRegion = false;
+            }
         }
 
         private string MergeFileTextAndKeyValueText(
