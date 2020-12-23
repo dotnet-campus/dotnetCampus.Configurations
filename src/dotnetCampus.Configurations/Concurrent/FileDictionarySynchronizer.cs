@@ -312,14 +312,17 @@ namespace dotnetCampus.Configurations.Concurrent
         {
             if (_file.Exists)
             {
-                using var fs = new FileStream(
-                    _file.FullName, FileMode.Open,
-                    FileAccess.Read, FileShare.Read,
-                    0x1000, FileOptions.SequentialScan);
-                using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
-                var text = reader.ReadToEnd();
-                CT.Log($"正在读取文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
-                return text;
+                return DoIOActionWithRetry(i =>
+                {
+                    using var fs = new FileStream(
+                        _file.FullName, FileMode.Open,
+                        FileAccess.Read, FileShare.Read,
+                        0x1000, FileOptions.SequentialScan);
+                    using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
+                    var text = reader.ReadToEnd();
+                    CT.Log($"正在读取文件({i})：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
+                    return text;
+                }) ?? "";
             }
             else
             {
@@ -335,16 +338,19 @@ namespace dotnetCampus.Configurations.Concurrent
                 _isInWritingFileRegion = true;
                 _hasCheckedFileChange = true;
 
-                CT.Log($"正在写入文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
-                using var fileStream = new FileStream(
-                    _file.FullName, FileMode.OpenOrCreate,
-                    FileAccess.Write, FileShare.None,
-                    0x1000, FileOptions.WriteThrough);
-                using var writer = new StreamWriter(fileStream, new UTF8Encoding(false, false), 0x1000, true);
-                fileStream.Position = 0;
-                writer.Write(text);
-                writer.Flush();
-                fileStream.SetLength(fileStream.Position);
+                DoIOActionWithRetry(i =>
+                {
+                    CT.Log($"正在写入文件(i)：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
+                    using var fileStream = new FileStream(
+                        _file.FullName, FileMode.OpenOrCreate,
+                        FileAccess.Write, FileShare.None,
+                        0x1000, FileOptions.WriteThrough);
+                    using var writer = new StreamWriter(fileStream, new UTF8Encoding(false, false), 0x1000, true);
+                    fileStream.Position = 0;
+                    writer.Write(text);
+                    writer.Flush();
+                    fileStream.SetLength(fileStream.Position);
+                });
             }
             finally
             {
@@ -374,6 +380,62 @@ namespace dotnetCampus.Configurations.Concurrent
             CT.Log($"合并键值集合：从文件 {{ {string.Join(", ", externalKeyValues.Keys)} }} 到新 {{ {string.Join(", ", mergedKeyValues.Keys)} }}", _file.Name, "Sync");
             return newText;
         }
+
+        /// <summary>
+        /// 本类型自己的跨进程读写是安全的，但不保证与其他编辑器的保存文件操作冲突，所以依然需要重试，只是等待时间可以较短次数可以较少。
+        /// </summary>
+        /// <param name="action">带有执行次数的委托。</param>
+        private static void DoIOActionWithRetry(Action<int> action)
+        {
+            if (action is null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            for (var i = 0; i < 10; i++)
+            {
+                try
+                {
+                    action(i);
+                }
+                catch (IOException)
+                {
+                    // 暂未能发现此处可能会出现的异常。
+                    Thread.Yield();
+                    continue;
+                }
+            }
+        }
+
+#nullable disable
+        /// <summary>
+        /// 本类型自己的跨进程读写是安全的，但不保证与其他编辑器的保存文件操作冲突，所以依然需要重试，只是等待时间可以较短次数可以较少。
+        /// </summary>
+        /// <param name="func">带有执行次数的委托。</param>
+        private static T DoIOActionWithRetry<T>(Func<int, T> func)
+        {
+            if (func is null)
+            {
+                throw new ArgumentNullException(nameof(func));
+            }
+
+            for (var i = 0; i < 10; i++)
+            {
+                try
+                {
+                    return func(i);
+                }
+                catch (IOException)
+                {
+                    // 如果被编辑器编辑配置文件，则极可能（超过 50%）在编辑器中保存时，这里读取是被占用的。
+                    // 如果被其他进程占用，在不同操作系统上，此异常的错误码都是不同的，因此暂不判断错误码。
+                    Thread.Yield();
+                    continue;
+                }
+            }
+            return default;
+        }
+#nullable restore
 
         /// <summary>
         /// 如果文件的时间更新，则说明文件是从未来穿越过来的。
