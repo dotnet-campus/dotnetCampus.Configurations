@@ -90,7 +90,11 @@ namespace dotnetCampus.IO
                 _watcher = new FileSystemWatcher(directory, file)
                 {
                     EnableRaisingEvents = true,
-                    NotifyFilter = NotifyFilters.LastWrite,
+                    NotifyFilter =
+                        // 文件被修改
+                        NotifyFilters.LastWrite
+                        // 文件被删除
+                        | NotifyFilters.FileName,
                 };
                 var weakEvent = new FileSystemWatcherWeakEventRelay(_watcher);
                 weakEvent.Changed += FinalFile_Changed;

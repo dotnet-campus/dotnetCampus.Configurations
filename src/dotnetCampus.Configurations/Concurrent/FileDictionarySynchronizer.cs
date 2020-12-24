@@ -53,6 +53,17 @@ namespace dotnetCampus.Configurations.Concurrent
         private DateTimeOffset _fileLastWriteTime = DateTimeOffset.MinValue;
 
         /// <summary>
+        /// 上次同步文件时，文件是否存在。
+        /// 使用此字段是为了解决以下问题：
+        /// <list type="number">
+        /// <item>先删除文件，这时我们发现文件被删了，记录下同步时间；</item>
+        /// <item>再将文件撤销回来，我们却发现文件时间比较旧，于是把这撤回来的文件覆盖了。</item>
+        /// </list>
+        /// 我们认定，文件如果发生了存在状态的改变，则一定是更新的。这种假设是建立在“程序（本代码）不主动删文件”这个前提下的；如果删，只可能是用户干的。
+        /// </summary>
+        private bool? _lastFileExists;
+
+        /// <summary>
         /// 上次同步文件时，文件的全文内容。
         /// </summary>
         private string _lastSyncedFileContent = "";
@@ -64,14 +75,14 @@ namespace dotnetCampus.Configurations.Concurrent
         private volatile int _fileSyncingErrorCount;
 
         /// <summary>
-        /// 获取或设置当前是否正处在进程安全的同步文件的代码片段。
-        /// 如果此值为 true，说明期间的文件读写只可能来自于本进程。
+        /// 获取或设置当前是否正处在进程安全的写入文件的代码片段。
+        /// 如果此值为 true，说明期间的文件写入只可能来自于本进程。
         /// </summary>
-        private bool _isInSyncingArea;
+        private bool _isInWritingFileRegion;
 
         /// <summary>
-        /// 延迟反映 <see cref="_isInSyncingArea"/> 值的变化。
-        /// <see cref="_isInSyncingArea"/> 值明确表示进程安全区的变化，但 <see cref="_hasCheckedFileChange"/> 在每一次安全区执行结束后，在 <see cref="DangerousCheckIfThisFileChangeIsFromSelf"/> 调用前都将保持 true。
+        /// 延迟反映 <see cref="_isInWritingFileRegion"/> 值的变化。
+        /// <see cref="_isInWritingFileRegion"/> 值明确表示进程安全区的变化，但 <see cref="_hasCheckedFileChange"/> 在每一次安全区执行结束后，在 <see cref="DangerousCheckIfThisFileChangeIsFromSelf"/> 调用前都将保持 true。
         /// </summary>
         private bool _hasCheckedFileChange;
 
@@ -144,7 +155,7 @@ namespace dotnetCampus.Configurations.Concurrent
         /// <returns></returns>
         public bool DangerousCheckIfThisFileChangeIsFromSelf()
         {
-            if (_isInSyncingArea)
+            if (_isInWritingFileRegion)
             {
                 return true;
             }
@@ -168,8 +179,6 @@ namespace dotnetCampus.Configurations.Concurrent
                 CT.Log($"正在同步，已进入进程安全区...", _file.Name);
                 try
                 {
-                    _isInSyncingArea = true;
-                    _hasCheckedFileChange = true;
                     SynchronizeCore(context);
                     return;
                 }
@@ -181,7 +190,6 @@ namespace dotnetCampus.Configurations.Concurrent
                 }
                 finally
                 {
-                    _isInSyncingArea = false;
                     CT.Log($"正在同步，已退出进程安全区...", _file.Name);
                 }
             });
@@ -198,8 +206,14 @@ namespace dotnetCampus.Configurations.Concurrent
             _file.Refresh();
             var utcNow = DateTimeOffset.UtcNow;
             var lastWriteTime = _file.Exists ? FixFileTime(_file.LastWriteTimeUtc, utcNow) : utcNow;
+            if (_file.Exists && _lastFileExists is false)
+            {
+                // 如果本此触发同步是因为文件新创建，那么无论此文件是新是旧，都视其为最新。
+                // 我们认定，如果文件上次不存在而这次存在，即使文件时间是旧的（例如用户从回收站将其恢复），我们也应该视其为最新。
+                lastWriteTime = utcNow;
+            }
             DateTimeOffset newLastWriteTime;
-            if (SupportsHighResolutionFileTime && lastWriteTime == _fileLastWriteTime)
+            if (SupportsHighResolutionFileTime && lastWriteTime == _fileLastWriteTime && _file.Exists == _lastFileExists)
             {
                 // 在支持高精度时间的文件系统上：
                 // 自上次同步文件以来，文件从未发生过更改（无需提前打开文件）。
@@ -232,7 +246,7 @@ namespace dotnetCampus.Configurations.Concurrent
                 _file.LastWriteTimeUtc = newLastWriteTime.UtcDateTime;
             }
             // 重新更新文件的信息，因为前面可能发生了更改。
-            _file.Refresh();
+            _lastFileExists = _file.Exists;
             _fileLastWriteTime = _file.Exists ? newLastWriteTime : DateTimeOffset.MinValue;
         }
 
@@ -304,14 +318,17 @@ namespace dotnetCampus.Configurations.Concurrent
         {
             if (_file.Exists)
             {
-                using var fs = new FileStream(
-                    _file.FullName, FileMode.Open,
-                    FileAccess.Read, FileShare.Read,
-                    0x1000, FileOptions.SequentialScan);
-                using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
-                var text = reader.ReadToEnd();
-                CT.Log($"正在读取文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
-                return text;
+                return DoIOActionWithRetry(i =>
+                {
+                    using var fs = new FileStream(
+                        _file.FullName, FileMode.Open,
+                        FileAccess.Read, FileShare.Read,
+                        0x1000, FileOptions.SequentialScan);
+                    using var reader = new StreamReader(fs, Encoding.UTF8, true, 0x1000, true);
+                    var text = reader.ReadToEnd();
+                    CT.Log($"正在读取文件({i})：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
+                    return text;
+                }) ?? "";
             }
             else
             {
@@ -322,16 +339,29 @@ namespace dotnetCampus.Configurations.Concurrent
 
         private void WriteAllText(string text)
         {
-            CT.Log($"正在写入文件：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
-            using var fileStream = new FileStream(
-                _file.FullName, FileMode.OpenOrCreate,
-                FileAccess.Write, FileShare.None,
-                0x1000, FileOptions.WriteThrough);
-            using var writer = new StreamWriter(fileStream, new UTF8Encoding(false, false), 0x1000, true);
-            fileStream.Position = 0;
-            writer.Write(text);
-            writer.Flush();
-            fileStream.SetLength(fileStream.Position);
+            try
+            {
+                _isInWritingFileRegion = true;
+                _hasCheckedFileChange = true;
+
+                DoIOActionWithRetry(i =>
+                {
+                    CT.Log($"正在写入文件(i)：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
+                    using var fileStream = new FileStream(
+                        _file.FullName, FileMode.OpenOrCreate,
+                        FileAccess.Write, FileShare.None,
+                        0x1000, FileOptions.WriteThrough);
+                    using var writer = new StreamWriter(fileStream, new UTF8Encoding(false, false), 0x1000, true);
+                    fileStream.Position = 0;
+                    writer.Write(text);
+                    writer.Flush();
+                    fileStream.SetLength(fileStream.Position);
+                });
+            }
+            finally
+            {
+                _isInWritingFileRegion = false;
+            }
         }
 
         private string MergeFileTextAndKeyValueText(
@@ -356,6 +386,62 @@ namespace dotnetCampus.Configurations.Concurrent
             CT.Log($"合并键值集合：从文件 {{ {string.Join(", ", externalKeyValues.Keys)} }} 到新 {{ {string.Join(", ", mergedKeyValues.Keys)} }}", _file.Name, "Sync");
             return newText;
         }
+
+        /// <summary>
+        /// 本类型自己的跨进程读写是安全的，但不保证与其他编辑器的保存文件操作冲突，所以依然需要重试，只是等待时间可以较短次数可以较少。
+        /// </summary>
+        /// <param name="action">带有执行次数的委托。</param>
+        private static void DoIOActionWithRetry(Action<int> action)
+        {
+            if (action is null)
+            {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            for (var i = 0; i < 10; i++)
+            {
+                try
+                {
+                    action(i);
+                }
+                catch (IOException)
+                {
+                    // 暂未能发现此处可能会出现的异常。
+                    Thread.Yield();
+                    continue;
+                }
+            }
+        }
+
+#nullable disable
+        /// <summary>
+        /// 本类型自己的跨进程读写是安全的，但不保证与其他编辑器的保存文件操作冲突，所以依然需要重试，只是等待时间可以较短次数可以较少。
+        /// </summary>
+        /// <param name="func">带有执行次数的委托。</param>
+        private static T DoIOActionWithRetry<T>(Func<int, T> func)
+        {
+            if (func is null)
+            {
+                throw new ArgumentNullException(nameof(func));
+            }
+
+            for (var i = 0; i < 10; i++)
+            {
+                try
+                {
+                    return func(i);
+                }
+                catch (IOException)
+                {
+                    // 如果被编辑器编辑配置文件，则极可能（超过 50%）在编辑器中保存时，这里读取是被占用的。
+                    // 如果被其他进程占用，在不同操作系统上，此异常的错误码都是不同的，因此暂不判断错误码。
+                    Thread.Yield();
+                    continue;
+                }
+            }
+            return default;
+        }
+#nullable restore
 
         /// <summary>
         /// 如果文件的时间更新，则说明文件是从未来穿越过来的。
