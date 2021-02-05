@@ -83,6 +83,14 @@ namespace dotnetCampus.IO
             var pair = FindWatchableLevel();
             var directory = pair._directory;
             var file = pair._file;
+
+            if (string.IsNullOrEmpty(directory))
+            {
+                //文件的上级目录找不到，放弃了
+                //比如文件所在的盘符不存在了
+                return;
+            }
+
             if (File.Exists(_file.FullName))
             {
                 // 如果文件存在，说明这是最终的文件。
@@ -102,15 +110,23 @@ namespace dotnetCampus.IO
             }
             else
             {
-                // 注意这里的 file 可能是文件也可能是文件夹。
-                _watcher = new FileSystemWatcher(directory, file)
+                try
                 {
-                    EnableRaisingEvents = true,
-                };
-                var weakEvent = new FileSystemWatcherWeakEventRelay(_watcher);
-                weakEvent.Created += FileOrDirectory_CreatedOrDeleted;
-                weakEvent.Renamed += FileOrDirectory_CreatedOrDeleted;
-                weakEvent.Deleted += FileOrDirectory_CreatedOrDeleted;
+                    // 注意这里的 file 可能是文件也可能是文件夹。
+                    _watcher = new FileSystemWatcher(directory, file)
+                    {
+                        EnableRaisingEvents = true,
+                    };
+                    var weakEvent = new FileSystemWatcherWeakEventRelay(_watcher);
+                    weakEvent.Created += FileOrDirectory_CreatedOrDeleted;
+                    weakEvent.Renamed += FileOrDirectory_CreatedOrDeleted;
+                    weakEvent.Deleted += FileOrDirectory_CreatedOrDeleted;
+                }
+                catch (FileNotFoundException)
+                {
+                    //在FindWatchableLevel找到上级目录之后，到执行到这里上级目录又被删除了，重试
+                    Watch();
+                }
             }
         }
 
@@ -169,6 +185,12 @@ namespace dotnetCampus.IO
                 var directory = Path.GetDirectoryName(path);
                 var file = Path.GetFileName(path);
 
+                // 如果找不到上级目录了，直接返回
+                if (string.IsNullOrEmpty(directory))
+                {
+                    return new FolderPair(directory, file);
+                }
+
                 // 检查文件夹是否存在，只要文件夹存在，那么就可以返回。
                 if (Directory.Exists(directory))
                 {
@@ -176,7 +198,7 @@ namespace dotnetCampus.IO
                 }
 
                 // 如果连文件夹都不存在，那么就需要查找上一层文件夹。
-                path = directory ?? throw new InvalidOperationException($"无法找到被监视路径的顶级目录，路径为 {path} 。");
+                path = directory;
             }
         }
 
