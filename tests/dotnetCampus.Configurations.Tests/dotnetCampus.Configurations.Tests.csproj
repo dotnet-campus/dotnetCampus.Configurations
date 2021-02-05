@@ -20,6 +20,7 @@
     <PackageReference Include="MSTestEnhancer" Version="2.0.1" />
     <PackageReference Include="Moq" Version="4.15.1" />
     <PackageReference Include="coverlet.collector" Version="1.3.0" />
+    <PackageReference Include="Walterlv.IO.PackageManagement" Version="5.11.3" />
   </ItemGroup>
 
   <ItemGroup>

@@ -192,7 +192,7 @@ namespace dotnetCampus.IO
                 }
 
                 // 检查文件夹是否存在，只要文件夹存在，那么就可以返回。
-                if (Directory.Exists(directory))
+                if (JunctionPoint.CheckDirectoryExistsWithJunctionPoint(directory))
                 {
                     return new FolderPair(directory, file);
                 }
