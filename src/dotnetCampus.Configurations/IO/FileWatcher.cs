@@ -72,17 +72,18 @@ namespace dotnetCampus.IO
 
         /// <summary>
         /// 监视文件的改变。
+        /// 最多重试10次。
         /// </summary>
         /// <remarks>
         /// 此方法可以被重复调用，不会引发异常或导致重复监视。
         /// </remarks>
-        private void Watch() => Watch(0);
+        private void Watch() => Watch(10);
 
         /// <summary>
         /// 监视文件的改变。
         /// </summary>
         /// <param name="retryTime">
-        /// 当前的重试次数，最多重试10次
+        /// 重试次数
         /// </param>
         /// <remarks>
         /// 此方法可以被重复调用，不会引发异常或导致重复监视。
@@ -91,8 +92,8 @@ namespace dotnetCampus.IO
         {
             Stop();
 
-            retryTime++;
-            if (retryTime > 10) //尝试10次，防止爆栈
+            retryTime--;
+            if (retryTime <= 0) //限制次数，防止爆栈
             {
                 return;
             }
