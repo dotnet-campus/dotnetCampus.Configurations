@@ -76,9 +76,26 @@ namespace dotnetCampus.IO
         /// <remarks>
         /// 此方法可以被重复调用，不会引发异常或导致重复监视。
         /// </remarks>
-        private void Watch()
+        private void Watch() => Watch(0);
+
+        /// <summary>
+        /// 监视文件的改变。
+        /// </summary>
+        /// <param name="retryTime">
+        /// 当前的重试次数，最多重试10次
+        /// </param>
+        /// <remarks>
+        /// 此方法可以被重复调用，不会引发异常或导致重复监视。
+        /// </remarks>
+        private void Watch(int retryTime)
         {
             Stop();
+
+            retryTime++;
+            if (retryTime > 10) //尝试10次，防止爆栈
+            {
+                return;
+            }
 
             var pair = FindWatchableLevel();
             var directory = pair._directory;
@@ -125,7 +142,7 @@ namespace dotnetCampus.IO
                 catch (FileNotFoundException)
                 {
                     //在FindWatchableLevel找到上级目录之后，到执行到这里上级目录又被删除了，重试
-                    Watch();
+                    Watch(retryTime);
                 }
             }
         }
