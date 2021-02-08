@@ -10,6 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Directory.Build.props = Directory.Build.props
 		LICENSE = LICENSE
 		README.md = README.md
+		build\Version.props = build\Version.props
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnetCampus.Configurations", "src\dotnetCampus.Configurations\dotnetCampus.Configurations.csproj", "{CD0B4E3B-7424-4EF0-A339-F290A658EDC6}"

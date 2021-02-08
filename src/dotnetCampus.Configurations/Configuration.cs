@@ -31,84 +31,108 @@ namespace dotnetCampus.Configurations
 
         /// <summary>
         /// 在派生类中为属性的 get 访问器提供获取配置值的方法。
-        /// 此方法会返回可空值类型，如果配置项不存在，则指为 null。
+        /// 此方法会返回可空值类型，如果配置项不存在或不是布尔类型，则值为 null。
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
         protected bool? GetBoolean([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return string.IsNullOrWhiteSpace(value) ? (bool?) null : bool.Parse(value);
+            return !string.IsNullOrWhiteSpace(value)
+                && bool.TryParse(value, out var result)
+                ? result
+                : (bool?)null;
         }
 
         /// <summary>
         /// 在派生类中为属性的 get 访问器提供获取配置值的方法。
-        /// 此方法会返回可空值类型，如果配置项不存在，则指为 null。
+        /// 此方法会返回可空值类型，如果配置项不存在或不是数值类型，则值为 null。
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
         protected decimal? GetDecimal([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return string.IsNullOrWhiteSpace(value)
-                ? (decimal?) null
-                : decimal.Parse(value, CultureInfo.InvariantCulture);
+            return !string.IsNullOrWhiteSpace(value)
+                && decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
+                ? result
+                : (decimal?)null;
         }
 
         /// <summary>
         /// 在派生类中为属性的 get 访问器提供获取配置值的方法。
-        /// 此方法会返回可空值类型，如果配置项不存在，则指为 null。
+        /// 此方法会返回可空值类型，如果配置项不存在或不是数值类型，则值为 null。
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
         protected double? GetDouble([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return string.IsNullOrWhiteSpace(value)
-                ? (double?) null
-                : double.Parse(value, CultureInfo.InvariantCulture);
+            return !string.IsNullOrWhiteSpace(value)
+                && double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
+                ? result
+                : (double?)null;
         }
 
         /// <summary>
         /// 在派生类中为属性的 get 访问器提供获取配置值的方法。
-        /// 此方法会返回可空值类型，如果配置项不存在，则指为 null。
+        /// 此方法会返回可空值类型，如果配置项不存在或不是数值类型，则值为 null。
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
         protected float? GetSingle([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return string.IsNullOrWhiteSpace(value)
-                ? (float?) null
-                : float.Parse(value, CultureInfo.InvariantCulture);
+            return !string.IsNullOrWhiteSpace(value)
+                && float.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
+                ? result
+                : (float?)null;
         }
 
         /// <summary>
         /// 在派生类中为属性的 get 访问器提供获取配置值的方法。
-        /// 此方法会返回可空值类型，如果配置项不存在，则指为 null。
+        /// 此方法会返回可空值类型，如果配置项不存在或不是整数类型，则值为 null。
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
         protected int? GetInt32([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return string.IsNullOrWhiteSpace(value)
-                ? (int?) null
-                : int.Parse(value, CultureInfo.InvariantCulture);
+            return !string.IsNullOrWhiteSpace(value)
+                && int.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
+                ? result
+                : (int?)null;
         }
 
         /// <summary>
         /// 在派生类中为属性的 get 访问器提供获取配置值的方法。
-        /// 此方法会返回可空值类型，如果配置项不存在，则指为 null。
+        /// 此方法会返回可空值类型，如果配置项不存在或不是整数类型，则值为 null。
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
         protected long? GetInt64([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return string.IsNullOrWhiteSpace(value)
-                ? (long?) null
-                : long.Parse(value, CultureInfo.InvariantCulture);
+            return !string.IsNullOrWhiteSpace(value)
+                && long.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
+                ? result
+                : (long?)null;
+        }
+
+        /// <summary>
+        /// 在派生类中为属性的 get 访问器提供获取配置值的方法。
+        /// 此方法会返回可空值类型，如果配置项不存在或不是指定的枚举类型，则值为 null。
+        /// </summary>
+        /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
+        /// <returns>配置项的值。</returns>
+        protected T? GetEnum<T>([CallerMemberName] string? key = null)
+            where T : struct, IConvertible
+        {
+            var value = GetValue(key);
+            return !string.IsNullOrWhiteSpace(value)
+                && Enum.TryParse<T>(value, out var result)
+                ? result
+                : (T?)null;
         }
 
         /// <summary>
@@ -192,6 +216,15 @@ namespace dotnetCampus.Configurations
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         protected void SetValue(long? value, [CallerMemberName] string? key = null)
             => SetValue(value?.ToString(CultureInfo.InvariantCulture) ?? "", key);
+
+        /// <summary>
+        /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
+        /// </summary>
+        /// <param name="value">配置项的值。</param>
+        /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
+        protected void SetEnum<T>(T? value, [CallerMemberName] string? key = null)
+            where T : struct, IConvertible
+            => SetValue(value?.ToString() ?? "", key);
 
         /// <summary>
         /// 在派生类中为属性的 set 访问器提供设置配置值的方法。
