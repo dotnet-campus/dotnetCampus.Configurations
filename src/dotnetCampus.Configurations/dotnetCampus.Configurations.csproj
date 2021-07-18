@@ -15,6 +15,7 @@
     <RepositoryType>git</RepositoryType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Configurations>Debug;Release;UnitTest</Configurations>
+    <Description>COIN 硬币格式的高性能配置文件读写库，COIN = Configuration\n，即“配置+换行符”，因默认使用“\n”作为换行符而得名。COIN 设计了一个高性能的应用程序配置文件，以及实现高性能读写这个配置文件的 .NET 库。特点是高性能读写；在初始化阶段使用全异步处理，避免阻塞主流程；多线程和多进程安全；无异常设计等</Description>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'UnitTest' ">
