@@ -75,7 +75,7 @@ configs["Foo"] = "";
 // 这里是大型项目配置初始化处的代码。
 // 此类型中包含底层的配置读写方法，而且所有读写全部是异步的，防止影响启动性能。
 var configFileName = @"C:\Users\lvyi\Desktop\walterlv.coin";
-var config = new FileConfigurationRepo(configFileName);
+var config = ConfigurationFactory.FromFile(configFileName);
 
 // 如果你需要对整个应用程序公开配置，那么可以公开 CreateAppConfigurator 方法返回的新实例。
 // 这个实例的所有配置读写全部是同步方法，这是为了方便其他模块使用。
@@ -172,6 +172,7 @@ public void Update()
 1. 高性能读写
     - 在初始化阶段使用全异步处理，避免阻塞主流程。
     - 使用特别为高性能读写而设计的配置文件格式。
+    - 多线程和多进程安全高性能读写。
 1. 无异常设计
     - 所有配置项的读写均为“无异常设计”，你完全不需要在业务代码中处理任何异常。
     - 为防止业务代码中出现意料之外的 `NullReferenceException`，所有配置项的返回值均不为实际意义的 `null`。
