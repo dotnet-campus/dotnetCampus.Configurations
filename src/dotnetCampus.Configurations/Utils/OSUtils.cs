@@ -34,8 +34,8 @@ namespace dotnetCampus.Configurations.Utils
             {
                 return false;
             }
-#endif
             return true;
+#endif
         }
     }
 }
