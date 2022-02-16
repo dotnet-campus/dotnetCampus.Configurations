@@ -438,7 +438,7 @@ NewValue
         {
             "不监听，文件内容发生了改变，也读不到文件的新值。".Test(async () =>
             {
-                var coin = TestUtil.GetTempFile("configs.coin");
+                var coin = TestUtil.GetTempFile("manifest1.coin");
                 var configs = CreateIndependentRepo(coin, RepoSyncingBehavior.Static).CreateAppConfigurator();
                 var fake = configs.Of<FakeConfiguration>();
                 var oldValue = fake.Key;
@@ -470,7 +470,7 @@ NewValue
 
             "不监听，文件被删除，所有的值仍然保留未被删除。".Test(async () =>
             {
-                var coin = TestUtil.GetTempFile("configs.coin");
+                var coin = TestUtil.GetTempFile("manifest2.coin");
                 var configs = CreateIndependentRepo(coin, RepoSyncingBehavior.Static).CreateAppConfigurator();
                 var fake = configs.Of<FakeConfiguration>();
                 var oldValue = fake.Key;
