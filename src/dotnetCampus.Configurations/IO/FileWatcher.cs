@@ -109,26 +109,26 @@ namespace dotnetCampus.IO
                 return;
             }
 
-            if (File.Exists(_file.FullName))
+            try
             {
-                // 如果文件存在，说明这是最终的文件。
-                // 注意使用 File.Exists 判断已存在的同名文件夹时会返回 false。
-                _watcher = new FileSystemWatcher(directory, file)
+                if (File.Exists(_file.FullName))
                 {
-                    EnableRaisingEvents = true,
-                    NotifyFilter =
-                        // 文件被修改
-                        NotifyFilters.LastWrite
-                        // 文件被删除
-                        | NotifyFilters.FileName,
-                };
-                var weakEvent = new FileSystemWatcherWeakEventRelay(_watcher);
-                weakEvent.Changed += FinalFile_Changed;
-                weakEvent.Deleted += FileOrDirectory_CreatedOrDeleted;
-            }
-            else
-            {
-                try
+                    // 如果文件存在，说明这是最终的文件。
+                    // 注意使用 File.Exists 判断已存在的同名文件夹时会返回 false。
+                    _watcher = new FileSystemWatcher(directory, file)
+                    {
+                        EnableRaisingEvents = true,
+                        NotifyFilter =
+                            // 文件被修改
+                            NotifyFilters.LastWrite
+                            // 文件被删除
+                            | NotifyFilters.FileName,
+                    };
+                    var weakEvent = new FileSystemWatcherWeakEventRelay(_watcher);
+                    weakEvent.Changed += FinalFile_Changed;
+                    weakEvent.Deleted += FileOrDirectory_CreatedOrDeleted;
+                }
+                else
                 {
                     // 注意这里的 file 可能是文件也可能是文件夹。
                     _watcher = new FileSystemWatcher(directory, file)
@@ -140,11 +140,18 @@ namespace dotnetCampus.IO
                     weakEvent.Renamed += FileOrDirectory_CreatedOrDeleted;
                     weakEvent.Deleted += FileOrDirectory_CreatedOrDeleted;
                 }
-                catch (FileNotFoundException)
-                {
-                    //在FindWatchableLevel找到上级目录之后，到执行到这里上级目录又被删除了，重试
-                    Watch(retryTime);
-                }
+            }
+            catch (ArgumentException)
+            {
+                // 构造函数抛出：目录名无效。
+                // 在 FindWatchableLevel 找到上级目录之后，到执行到这里上级目录又被删除了，重试。
+                Watch(retryTime);
+            }
+            catch (FileNotFoundException)
+            {
+                // EnableRaisingEvents 属性设置抛出
+                // 在 FindWatchableLevel 找到上级目录之后，到执行到这里上级目录又被删除了，重试。
+                Watch(retryTime);
             }
         }
 
