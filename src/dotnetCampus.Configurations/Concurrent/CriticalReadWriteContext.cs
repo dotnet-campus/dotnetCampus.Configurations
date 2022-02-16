@@ -11,7 +11,7 @@ namespace dotnetCampus.Configurations.Concurrent
     internal class CriticalReadWriteContext<TKey, TValue> : ICriticalReadWriteContext<TKey, TValue>
     {
         private readonly Func<IReadOnlyDictionary<TKey, TValue>, DateTimeOffset, TimedKeyValues<TKey, TValue>> _keyValueMergingFunc;
-        
+
         /// <summary>
         /// 创建 <see cref="CriticalReadWriteContext{TKey, TValue}"/> 的新实例。
         /// </summary>

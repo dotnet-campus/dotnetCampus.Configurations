@@ -1,5 +1,4 @@
-﻿using dotnetCampus.Configurations.Utils;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.IO;
@@ -7,6 +6,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+
+using dotnetCampus.Configurations.Utils;
 
 namespace dotnetCampus.Configurations.Concurrent
 {
@@ -264,6 +265,12 @@ namespace dotnetCampus.Configurations.Concurrent
 
             // 读取文件。
             var text = ReadAllText();
+            if (text is null)
+            {
+                // 如果读取失败了，就当本次没同步过。
+                return lastWriteTime;
+            }
+
             _lastSyncedFileContent = text;
 
             // 将文件中的键值集合与内存中的键值集合合并。
@@ -314,11 +321,12 @@ namespace dotnetCampus.Configurations.Concurrent
             }
         }
 
-        private string ReadAllText()
+        private string? ReadAllText()
         {
             if (_file.Exists)
             {
-                return DoIOActionWithRetry(i =>
+                // 读取成功则正常返回，读取失败返回 null（表示本次读取无效）。
+                return DoIOActionWithRetry<string?>(i =>
                 {
                     using var fs = new FileStream(
                         _file.FullName, FileMode.Open,
@@ -328,10 +336,11 @@ namespace dotnetCampus.Configurations.Concurrent
                     var text = reader.ReadToEnd();
                     CT.Log($"正在读取文件({i})：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
                     return text;
-                }) ?? "";
+                });
             }
             else
             {
+                // 文件不存在返回空字符串（表示本次读取有效）。
                 CT.Log($"文件不存在，无需读取...", _file.Name, "Sync");
                 return "";
             }
