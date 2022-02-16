@@ -32,7 +32,7 @@ namespace dotnetCampus.Configurations
             return Convert(value);
         }
 
-        private static ConfigurationString? Convert(string? value)=> value == null || string.IsNullOrEmpty(value) ? (ConfigurationString?)null : new ConfigurationString(value);
+        private static ConfigurationString? Convert(string? value) => value == null || string.IsNullOrEmpty(value) ? (ConfigurationString?)null : new ConfigurationString(value);
 
         /// <summary>
         /// 调用 <see cref="ToString"/> 方法以便将 <see cref="ConfigurationString"/> 转换为非 null 字符串。
