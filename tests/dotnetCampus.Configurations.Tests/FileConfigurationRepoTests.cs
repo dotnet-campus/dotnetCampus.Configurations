@@ -431,6 +431,59 @@ NewValue
         }
 
         /// <summary>
+        /// 当监听的文件在外部发生改变的时候。
+        /// </summary>
+        [ContractTestCase]
+        public void 不监视文件改变()
+        {
+            "不监听，文件内容发生了改变，也读不到文件的新值。".Test(async () =>
+            {
+                var coin = TestUtil.GetTempFile("configs.coin");
+                var configs = CreateIndependentRepo(coin, RepoSyncingBehavior.Static).CreateAppConfigurator();
+                var fake = configs.Of<FakeConfiguration>();
+                var oldValue = fake.Key;
+                Assert.AreEqual("Value", oldValue);
+                File.WriteAllText(coin.FullName, @">
+Key
+NewValue
+>");
+                await Task.Delay(500).ConfigureAwait(false);
+                var newValue = fake.Key;
+                Assert.AreEqual("Value", newValue);
+            });
+
+            "不监听，后续文件才被创建，无法读到文件中存放的值。".Test(async () =>
+            {
+                var coin = TestUtil.GetTempFile(null, ".coin");
+                var configs = CreateIndependentRepo(coin, RepoSyncingBehavior.Static).CreateAppConfigurator();
+                var fake = configs.Of<FakeConfiguration>();
+                var oldValue = fake.Key;
+                Assert.AreEqual("", oldValue);
+                File.WriteAllText(coin.FullName, @">
+Key
+NewValue
+>");
+                await Task.Delay(500).ConfigureAwait(false);
+                var newValue = fake.Key;
+                Assert.AreEqual("", newValue);
+            });
+
+            "不监听，文件被删除，所有的值仍然保留未被删除。".Test(async () =>
+            {
+                var coin = TestUtil.GetTempFile("configs.coin");
+                var configs = CreateIndependentRepo(coin, RepoSyncingBehavior.Static).CreateAppConfigurator();
+                var fake = configs.Of<FakeConfiguration>();
+                var oldValue = fake.Key;
+                Assert.AreEqual("Value", oldValue);
+                File.Delete(coin.FullName);
+                Thread.Sleep(500);
+                await Task.Delay(500).ConfigureAwait(false);
+                var newValue = fake.Key;
+                Assert.AreEqual("Value", newValue);
+            });
+        }
+
+        /// <summary>
         /// 断言文件同步次数。
         /// </summary>
         /// <param name="repo">配置仓库。</param>
@@ -455,11 +508,10 @@ NewValue
         /// 正常不应该用这种方式创建配置读写，因为这种方式线程不安全；但这里我们要测跨进程的读写安全，所以采用此方式用跨线程访问全来模拟跨进程访问。
         /// </summary>
         /// <param name="file">请使用 <see cref="TestUtil.GetTempFile"/> 获取要传入的文件。</param>
+        /// <param name="syncingBehavior">指定应如何读取数据。是实时监听文件变更，还是只读一次，后续不再监听变更。后者性能更好。</param>
         /// <returns>用于读写配置的 <see cref="FileConfigurationRepo"/> 的新实例。</returns>
-        private static FileConfigurationRepo CreateIndependentRepo(FileInfo file) =>
-#pragma warning disable CS0618 // 类型或成员已过时
-            new FileConfigurationRepo(file.FullName);
-#pragma warning restore CS0618 // 类型或成员已过时
+        private static FileConfigurationRepo CreateIndependentRepo(FileInfo file, RepoSyncingBehavior syncingBehavior = RepoSyncingBehavior.Sync) =>
+            new(file.FullName, syncingBehavior);
 
         private static string FormatSyncingCount(params FileConfigurationRepo[] repos)
         {

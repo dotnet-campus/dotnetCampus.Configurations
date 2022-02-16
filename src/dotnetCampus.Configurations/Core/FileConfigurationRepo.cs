@@ -26,7 +26,7 @@ namespace dotnetCampus.Configurations.Core
         /// <summary>
         /// 用于监视文件改变（包括创建和删除）。
         /// </summary>
-        private readonly FileWatcher _watcher;
+        private readonly FileWatcher? _watcher;
 
         /// <summary>
         /// 提供循环可等待操作。
@@ -64,7 +64,14 @@ namespace dotnetCampus.Configurations.Core
         /// <param name="fileName">配置文件的文件路径。</param>
         [Obsolete("请改用线程安全的 ConfigurationFactory 来创建实例。")]
         [EditorBrowsable(EditorBrowsableState.Never)]
-        public FileConfigurationRepo(string fileName)
+        public FileConfigurationRepo(string fileName) : this(fileName, RepoSyncingBehavior.Sync) { }
+
+        /// <summary>
+        /// 初始化使用 <paramref name="fileName"/> 作为配置文件的 <see cref="FileConfigurationRepo"/> 的新实例。
+        /// </summary>
+        /// <param name="fileName">配置文件的文件路径。</param>
+        /// <param name="syncingBehavior">指定应如何读取数据。是实时监听文件变更，还是只读一次，后续不再监听变更。后者性能更好。</param>
+        internal FileConfigurationRepo(string fileName, RepoSyncingBehavior syncingBehavior)
         {
             if (fileName == null)
             {
@@ -84,10 +91,17 @@ namespace dotnetCampus.Configurations.Core
                 FileEqualsComparison.KeyValueEquals);
 
             // 监视文件改变。
-            _watcher = new FileWatcher(_file);
-            _currentReadingFileTask = FastSynchronizeAsync();
-            _watcher.Changed += OnFileChanged;
-            _ = _watcher.WatchAsync();
+            if (syncingBehavior == RepoSyncingBehavior.Sync)
+            {
+                _watcher = new FileWatcher(_file);
+                _currentReadingFileTask = FastSynchronizeAsync();
+                _watcher.Changed += OnFileChanged;
+                _ = _watcher.WatchAsync();
+            }
+            else
+            {
+                _currentReadingFileTask = FastSynchronizeAsync();
+            }
         }
 
         /// <summary>
