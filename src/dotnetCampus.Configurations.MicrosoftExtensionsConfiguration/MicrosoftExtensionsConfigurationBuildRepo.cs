@@ -111,7 +111,9 @@ namespace dotnetCampus.Configurations.MicrosoftExtensionsConfiguration
 
             public IEnumerable<string> GetChildKeys(IEnumerable<string> earlierKeys, string parentPath)
             {
-                return Array.Empty<string>();
+                // 这里如果返回空集合，将会清空原有的配置内容。这个函数的作用是用来进行过滤和追加两个合一起，底层框架这样设计是为了性能考虑。在一个配置管理里面，是由多个 IConfigurationProvider 组成，而多个 IConfigurationProvider 之间，需要有相互影响。在获取所有的 GetChildKeys 时候，假定每个 IConfigurationProvider 都需要追加自身的，那传入 IEnumerable 类型，用于追加是最省资源的。而有些 IConfigurationProvider 之间提供了相同的 Key 的配置，但是有些 IConfigurationProvider 期望覆盖，有些期望不覆盖，于是就通过 earlierKeys 即可用来实现过滤判断，每个不同的 IConfigurationProvider 可以有自己的策略，对先加入的 IConfigurationProvider 返回的 GetChildKeys 进行处理
+                // return Array.Empty<string>();
+                return earlierKeys;
             }
         }
     }
