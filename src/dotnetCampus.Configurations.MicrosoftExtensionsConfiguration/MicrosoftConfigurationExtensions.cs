@@ -25,5 +25,13 @@ namespace Microsoft.Extensions.Configuration
         /// <returns></returns>
         public static IAppConfigurator ToAppConfigurator(this IConfigurationBuilder configuration) =>
             new MicrosoftExtensionsConfigurationBuildRepo(configuration).CreateAppConfigurator();
+
+        /// <inheritdoc cref="ToAppConfigurator(IConfigurationBuilder)"/>
+        public static IAppConfigurator ToAppConfigurator<T>(this T configuration)
+            where T : IConfiguration, IConfigurationBuilder
+        {
+            IConfigurationBuilder configurationBuilder = configuration;
+            return configurationBuilder.ToAppConfigurator();
+        }
     }
 }
