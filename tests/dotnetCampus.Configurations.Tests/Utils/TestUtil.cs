@@ -22,11 +22,13 @@ namespace dotnetCampus.Configurations.Tests.Utils
         /// <param name="templateFileName">
         /// 如果指定临时文件的模板，则会确保生成的临时文件存在且与模板文件相同；
         /// 如果指定临时文件的模板为 null，则仅会返回一个临时文件的路径，而不会创建文件。</param>
+        /// <param name="relativeFilePath">将此配置文件放入到某文件夹中。</param>
         /// <returns>用于测试的临时文件。</returns>
-        public static FileInfo GetTempFile(string? templateFileName = null, string? extension = null)
+        public static FileInfo GetTempFile(string? templateFileName = null, string? extension = null, string? relativeFilePath = null)
         {
             var newFileName = Path.Combine(
-                Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!,
+                relativeFilePath ?? "",
                 Path.GetFileNameWithoutExtension(Path.GetTempFileName()));
             if (!string.IsNullOrWhiteSpace(templateFileName))
             {
