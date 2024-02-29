@@ -356,6 +356,10 @@ namespace dotnetCampus.Configurations.Concurrent
                 DoIOActionWithRetry(i =>
                 {
                     CT.Log($"正在写入文件(i)：{text.Replace("\r\n", "\\n").Replace("\n", "\\n")}", _file.Name, "Sync");
+                    if (!Directory.Exists(_file.Directory.FullName))
+                    {
+                        _file.Directory.Create();
+                    }
                     using var fileStream = new FileStream(
                         _file.FullName, FileMode.OpenOrCreate,
                         FileAccess.Write, FileShare.None,

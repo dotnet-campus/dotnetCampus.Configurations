@@ -205,6 +205,28 @@ namespace dotnetCampus.Configurations.Tests
                 // Assert
                 Assert.IsTrue(File.Exists(coin.FullName));
             });
+
+            "如果没有文件甚至连文件夹也不存在但需要存储数据，那么会创建文件夹和文件。".Test(async () =>
+            {
+                // Arrange
+                var coin = TestUtil.GetTempFile(null, ".coin", "Configs");
+                var directory = new DirectoryInfo(coin.DirectoryName!);
+                if (Directory.Exists(directory.FullName))
+                {
+                    directory.Delete(true);
+                }
+                var repo = CreateIndependentRepo(coin);
+
+                // Act
+                await repo.WriteAsync("Test.Create", "True").ConfigureAwait(false);
+                await repo.SaveAsync().ConfigureAwait(false);
+
+                // Assert
+                Assert.IsTrue(File.Exists(coin.FullName));
+
+                // Clean
+                directory.Delete(true);
+            });
         }
 
         [ContractTestCase]
