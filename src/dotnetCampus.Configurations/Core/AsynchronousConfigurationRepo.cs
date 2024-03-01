@@ -99,7 +99,7 @@ namespace dotnetCampus.Configurations.Core
             VerifyKey(key);
 
             var value = await ReadValueCoreAsync(key).ConfigureAwait(false);
-            return value ?? @default;
+            return value ?? ReadFromInheritedConfigurationRepo() ?? @default;
         }
 
         /// <summary>
@@ -134,6 +134,17 @@ namespace dotnetCampus.Configurations.Core
             NotifyChanged(new[] { key });
 #pragma warning restore 4014
         }
+
+        /// <summary>
+        /// 加上配置继承的仓库
+        /// </summary>
+        /// <param name="configurationRepo"></param>
+        public void AddInheritedConfigurationRepo(IReadOnlyConfigurationRepo configurationRepo)
+        {
+
+        }
+
+        private string? ReadFromInheritedConfigurationRepo() => null;
 
         private async Task NotifyChanged(IEnumerable<string> keys)
         {
