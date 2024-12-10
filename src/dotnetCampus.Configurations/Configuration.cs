@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using dotnetCampus.Configurations.Core;
@@ -271,5 +272,24 @@ namespace dotnetCampus.Configurations
         /// 获取用于管理应用程序字符串配置项的管理器。
         /// </summary>
         internal IConfigurationRepo? Repo { get; set; }
+
+        internal IAppConfigurator? AppConfigurator { get; set; }
+
+        /// <summary>
+        /// 尝试获取 <see cref="IAppConfigurator"/> 实例。只有配置框架内部创建的配置，才能获取到 <see cref="IAppConfigurator"/> 实例。
+        /// </summary>
+        /// <param name="appConfigurator"></param>
+        /// <returns></returns>
+        public bool TryGetAppConfigurator
+            (
+#if NETCOREAPP3_0_OR_GREATER
+                [NotNullWhen(true)]
+#endif
+                out IAppConfigurator? appConfigurator
+            )
+        {
+            appConfigurator = AppConfigurator;
+            return appConfigurator != null;
+        }
     }
 }

@@ -34,7 +34,8 @@ namespace dotnetCampus.Configurations.Core
             {
                 return new TConfiguration
                 {
-                    Repo = _repo
+                    Repo = _repo,
+                    AppConfigurator = this,
                 };
             });
         }
