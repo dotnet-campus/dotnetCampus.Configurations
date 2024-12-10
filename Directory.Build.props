@@ -12,5 +12,16 @@
       <RepositoryType>git</RepositoryType>
       <LangVersion>latest</LangVersion>
       <Nullable>enable</Nullable>
+      <Copyright>Copyright (c) dotnet-campus 2020-$([System.DateTime]::Now.ToString(`yyyy`))</Copyright>
+      <PackageReadmeFile>README.md</PackageReadmeFile>
+      <!-- 嵌入源代码到符号文件，方便调试 -->
+      <EmbedAllSources>true</EmbedAllSources>
+      <!-- 输出符号文件 -->
+      <IncludeSymbols>true</IncludeSymbols>
+      <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- 嵌入 README 文件 -->
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false"/>
+  </ItemGroup>
 </Project>
