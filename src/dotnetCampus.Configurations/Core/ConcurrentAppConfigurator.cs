@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace dotnetCampus.Configurations.Core
@@ -17,12 +18,10 @@ namespace dotnetCampus.Configurations.Core
             _repo = repo ?? throw new ArgumentNullException(nameof(repo));
         }
 
-        private readonly object _locker = new object();
-
         private readonly IConfigurationRepo _repo;
 
-        private readonly Dictionary<Type, Configuration> _configurationDictionary
-            = new Dictionary<Type, Configuration>();
+        private readonly ConcurrentDictionary<Type, Configuration> _configurationDictionary
+            = new ConcurrentDictionary<Type, Configuration>();
 
         /// <summary>
         /// 获取 <typeparamref name="TConfiguration"/> 类型的配置项组。
@@ -31,25 +30,13 @@ namespace dotnetCampus.Configurations.Core
         /// <returns>配置项组。</returns>
         public TConfiguration Of<TConfiguration>() where TConfiguration : Configuration, new()
         {
-            if (_configurationDictionary.TryGetValue(typeof(TConfiguration), out var configuration))
+            return (TConfiguration) _configurationDictionary.GetOrAdd(typeof(TConfiguration), _ =>
             {
-                return (TConfiguration) configuration;
-            }
-
-            lock (_locker)
-            {
-                if (_configurationDictionary.TryGetValue(typeof(TConfiguration), out var lockedConfiguration))
-                {
-                    return (TConfiguration) lockedConfiguration;
-                }
-
-                configuration = new TConfiguration
+                return new TConfiguration
                 {
                     Repo = _repo
                 };
-                _configurationDictionary[typeof(TConfiguration)] = configuration;
-                return (TConfiguration)configuration;
-            }
+            });
         }
 
         /// <summary>
