@@ -5,21 +5,13 @@ namespace dotnetCampus.Configurations.Core
     /// <summary>
     /// 管理应用程序中的字符串配置项。
     /// </summary>
-    public interface IConfigurationRepo
+    public interface IConfigurationRepo : IReadOnlyConfigurationRepo
     {
         /// <summary>
         /// 创建一个使用强类型的用于提供给应用程序业务使用的应用程序配置管理器。
         /// </summary>
         /// <returns>用于提供给应用程序业务使用的配置管理器。</returns>
         IAppConfigurator CreateAppConfigurator();
-
-        /// <summary>
-        /// 获取指定配置项的值，如果指定的 <paramref name="key"/> 不存在，则返回 null。
-        /// 此方法是线程安全的。
-        /// </summary>
-        /// <param name="key">配置项的标识符。</param>
-        /// <returns>配置项的值。</returns>
-        string? GetValue(string key);
 
         /// <summary>
         /// 设置指定配置项的值，如果设置为 null，可能删除 <paramref name="key"/> 配置项。
