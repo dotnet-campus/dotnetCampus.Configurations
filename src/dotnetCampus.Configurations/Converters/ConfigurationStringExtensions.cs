@@ -19,7 +19,7 @@ public static class ConfigurationStringExtensions
         {
             return null;
         }
-        var value = configurationString.Value.InternalGetValue();
+        var value = configurationString.Value.GetRawValueInternal();
         return bool.TryParse(value, out var result) ? result : null;
     }
 
@@ -35,7 +35,7 @@ public static class ConfigurationStringExtensions
             return null;
         }
 
-        var value = configurationString.Value.InternalGetValue();
+        var value = configurationString.Value.GetRawValueInternal();
         return decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : null;
     }
 
@@ -50,7 +50,7 @@ public static class ConfigurationStringExtensions
         {
             return null;
         }
-        var value = configurationString.Value.InternalGetValue();
+        var value = configurationString.Value.GetRawValueInternal();
         return double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : null;
     }
 
@@ -65,7 +65,7 @@ public static class ConfigurationStringExtensions
         {
             return null;
         }
-        var value = configurationString.Value.InternalGetValue();
+        var value = configurationString.Value.GetRawValueInternal();
         return float.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : null;
     }
 
@@ -87,7 +87,7 @@ public static class ConfigurationStringExtensions
         {
             return null;
         }
-        var value = configurationString.Value.InternalGetValue();
+        var value = configurationString.Value.GetRawValueInternal();
         return int.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : null;
     }
 
@@ -102,7 +102,7 @@ public static class ConfigurationStringExtensions
         {
             return null;
         }
-        var value = configurationString.Value.InternalGetValue();
+        var value = configurationString.Value.GetRawValueInternal();
         return long.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result) ? result : null;
     }
 
@@ -118,7 +118,7 @@ public static class ConfigurationStringExtensions
         {
             return null;
         }
-        var value = configurationString.Value.InternalGetValue();
+        var value = configurationString.Value.GetRawValueInternal();
 
         return Enum.TryParse<T>(value, out var result) ? result : null;
     }

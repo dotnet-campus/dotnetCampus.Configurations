@@ -36,7 +36,7 @@ namespace dotnetCampus.Configurations
         /// 内部的获取值方法，用于在内部获取值，过程中没有转换和判断，提升一点性能
         /// </summary>
         /// <returns></returns>
-        internal string? InternalGetValue() => _value;
+        internal string? GetRawValueInternal() => _value;
 
         private static ConfigurationString? Convert(string? value) => value == null || string.IsNullOrEmpty(value) ? (ConfigurationString?)null : new ConfigurationString(value);
 
