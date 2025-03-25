@@ -10,7 +10,7 @@ namespace dotnetCampus.Configurations
     /// 表示从 <see cref="Configuration.GetString"/> 中读取出来的配置项字符串的值。
     /// </summary>
     [StructLayout(LayoutKind.Auto)]
-    public readonly struct ConfigurationString : IEquatable<ConfigurationString>
+    public readonly struct ConfigurationString : IEquatable<ConfigurationString>, IEquatable<string>
     {
         private readonly string? _value;
 
@@ -31,6 +31,12 @@ namespace dotnetCampus.Configurations
         {
             return Convert(value);
         }
+
+        /// <summary>
+        /// 内部的获取值方法，用于在内部获取值，过程中没有转换和判断，提升一点性能
+        /// </summary>
+        /// <returns></returns>
+        internal string? InternalGetValue() => _value;
 
         private static ConfigurationString? Convert(string? value) => value == null || string.IsNullOrEmpty(value) ? (ConfigurationString?)null : new ConfigurationString(value);
 
