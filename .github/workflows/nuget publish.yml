@@ -12,20 +12,22 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: |
-          3.1.x
-          5.0.x
-          6.0.100
-          9.0.x
-
     - name: Install dotnet tool
       run: dotnet tool install -g dotnetCampus.TagToVersion
 
     - name: Set tag to version  
-      run: dotnet TagToVersion -t ${{ github.ref }}
+      run: cmd /c "dotnet TagToVersion -t ${{ github.ref }}"
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          3.1.x
+          5.0.x
+          6.0.x
+          7.0.x
+          8.0.x
+          9.0.x
 
     - name: Build with dotnet
       run: dotnet build --configuration Release -v n
@@ -38,7 +40,7 @@ jobs:
 
     - name: Add private GitHub registry to NuGet
       run: |
-        nuget sources add -name github -Source https://nuget.pkg.github.com/ORGANIZATION_NAME/index.json -Username ORGANIZATION_NAME -Password ${{ secrets.GITHUB_TOKEN }}
+        nuget sources add -name github -Source https://nuget.pkg.github.com/dotnet-campus/index.json -Username dotnet-campus -Password ${{ secrets.GITHUB_TOKEN }}
         
     - name: Push generated package to GitHub registry
       run: |
