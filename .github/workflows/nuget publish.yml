@@ -28,7 +28,7 @@ jobs:
     - name: List dotnet tool
       run: dotnet tool list -g
     - name: Set tag to version  
-      run: cmd /c "dotnet TagToVersion"
+      run: cmd /c "dotnet TagToVersion -t ${{ github.ref }}"
 
     - name: Build with dotnet
       run: dotnet build --configuration Release -v n
