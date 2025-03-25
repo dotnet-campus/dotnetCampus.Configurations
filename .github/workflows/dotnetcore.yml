@@ -16,6 +16,7 @@ jobs:
           3.1.x
           5.0.x
           6.0.100
+          9.0.x
     - name: Build with dotnet
       run: dotnet build --configuration Release
     - name: Test
@@ -34,8 +35,9 @@ jobs:
           3.1.x
           5.0.x
           6.0.100
+          9.0.x
     - name: Test
-      run: dotnet test "tests/dotnetCampus.Configurations.Tests"  --configuration Release
+      run: dotnet test "tests/dotnetCampus.Configurations.Tests" --configuration Release -f net9.0
 
   TestOnMac:
 
@@ -50,5 +52,6 @@ jobs:
           3.1.x
           5.0.x
           6.0.100
+          9.0.x
     - name: Test
-      run: dotnet test "tests/dotnetCampus.Configurations.Tests"  --configuration Release
+      run: dotnet test "tests/dotnetCampus.Configurations.Tests" --configuration Release -f net9.0
