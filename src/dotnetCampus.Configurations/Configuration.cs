@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using dotnetCampus.Configurations.Converters;
 using dotnetCampus.Configurations.Core;
 
 #pragma warning disable CA1724
@@ -39,10 +40,7 @@ namespace dotnetCampus.Configurations
         protected bool? GetBoolean([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return !string.IsNullOrWhiteSpace(value)
-                && bool.TryParse(value, out var result)
-                ? result
-                : (bool?)null;
+            return value.AsBoolean();
         }
 
         /// <summary>
@@ -54,10 +52,7 @@ namespace dotnetCampus.Configurations
         protected decimal? GetDecimal([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return !string.IsNullOrWhiteSpace(value)
-                && decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
-                ? result
-                : (decimal?)null;
+            return value.AsDecimal();
         }
 
         /// <summary>
@@ -69,10 +64,7 @@ namespace dotnetCampus.Configurations
         protected double? GetDouble([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return !string.IsNullOrWhiteSpace(value)
-                && double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
-                ? result
-                : (double?)null;
+            return value.AsDouble();
         }
 
         /// <summary>
@@ -84,10 +76,7 @@ namespace dotnetCampus.Configurations
         protected float? GetSingle([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return !string.IsNullOrWhiteSpace(value)
-                && float.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
-                ? result
-                : (float?)null;
+            return value.AsSingle();
         }
 
         /// <summary>
@@ -99,10 +88,7 @@ namespace dotnetCampus.Configurations
         protected int? GetInt32([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return !string.IsNullOrWhiteSpace(value)
-                && int.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
-                ? result
-                : (int?)null;
+            return value.AsInt32();
         }
 
         /// <summary>
@@ -114,10 +100,7 @@ namespace dotnetCampus.Configurations
         protected long? GetInt64([CallerMemberName] string? key = null)
         {
             var value = GetValue(key);
-            return !string.IsNullOrWhiteSpace(value)
-                && long.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var result)
-                ? result
-                : (long?)null;
+            return value.AsInt64();
         }
 
         /// <summary>
@@ -130,10 +113,7 @@ namespace dotnetCampus.Configurations
             where T : struct, IConvertible
         {
             var value = GetValue(key);
-            return !string.IsNullOrWhiteSpace(value)
-                && Enum.TryParse<T>(value, out var result)
-                ? result
-                : (T?)null;
+            return value.AsEnum<T>();
         }
 
         /// <summary>
@@ -154,7 +134,7 @@ namespace dotnetCampus.Configurations
         /// </summary>
         /// <param name="key">配置项的标识符，自动从属性名中获取。</param>
         /// <returns>配置项的值。</returns>
-        internal string? GetValue([CallerMemberName] string? key = null)
+        internal ConfigurationString? GetValue([CallerMemberName] string? key = null)
         {
             if (key is null)
             {
@@ -167,7 +147,7 @@ namespace dotnetCampus.Configurations
             }
 
             var value = Repo.GetValue($"{_section}{key}");
-            return value;
+            return (ConfigurationString?) value;
         }
 
         /// <summary>
