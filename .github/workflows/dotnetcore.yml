@@ -20,7 +20,7 @@ jobs:
     - name: Build with dotnet
       run: dotnet build --configuration Release
     - name: Test
-      run: dotnet test --configuration UnitTest -l "console;verbosity=detailed" --no-build -f net9.0
+      run: dotnet test "tests/dotnetCampus.Configurations.Tests" --configuration UnitTest -l "console;verbosity=detailed" -f net9.0
 
   TestOnLinux:
 
