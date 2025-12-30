@@ -198,8 +198,8 @@ namespace dotnetCampus.Configurations.Concurrent
         /// <returns>进程安全的值。</returns>
         private static ProcessSafeValueEntry<TValue> CreateInternalDeletedValue(ProcessSafeValueEntry<TValue> existedEntry)
             => new ProcessSafeValueEntry<TValue>(
-                existedEntry.ExternalValue,
                 default,
+                existedEntry.ExternalValue,
                 DateTimeOffset.UtcNow,
                 ProcessSafeValueState.Deleted);
 
