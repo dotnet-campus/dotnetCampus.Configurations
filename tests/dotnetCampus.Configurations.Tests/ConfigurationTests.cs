@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using dotnetCampus.Configurations.Core;
@@ -14,7 +15,7 @@ namespace dotnetCampus.Configurations.Tests
     public class ConfigurationTests
     {
         [ContractTestCase]
-        public void GetValueAndGetValue()
+        public void SetValueAndGetValue()
         {
             "综合测试，用于断点调试配置项执行流程。".Test(() =>
             {
@@ -226,6 +227,36 @@ namespace dotnetCampus.Configurations.Tests
             });
         }
 
+        [ContractTestCase]
+        public void ReadWriteValue()
+        {
+            "写覆盖空值后读取，可以读取到覆盖的内容".Test(async () =>
+            {
+                // https://github.com/dotnet-campus/dotnetCampus.Configurations/issues/76
+                var configurationFile = Path.GetTempFileName();
+                try
+                {
+                    var fileConfigurationRepo = ConfigurationFactory.FromFile(configurationFile,RepoSyncingBehavior.Sync);
+                    var appConfigurator = fileConfigurationRepo.CreateAppConfigurator();
+                    var configuration = appConfigurator.Of<ReadWriteTestConfiguration>();
+
+                    configuration.Testing = "abc";
+                    await fileConfigurationRepo.SaveAsync();
+
+                    var readValue = configuration.Testing;
+                    Assert.AreEqual("abc", readValue);
+
+                    configuration.Testing = "";
+                    readValue = configuration.Testing;
+                    Assert.IsTrue(string.IsNullOrEmpty(readValue));
+                }
+                finally
+                {
+                    File.Delete(configurationFile);
+                }
+            });
+        }
+
         /// <summary>
         /// 初始化一个 <see cref="IAppConfigurator"/> 的模拟实例。
         /// </summary>
@@ -260,6 +291,15 @@ namespace dotnetCampus.Configurations.Tests
             foreach (var key in dictionary.Keys.Where(keyFilter.Invoke).ToList())
             {
                 dictionary.Remove(key);
+            }
+        }
+
+        private class ReadWriteTestConfiguration : Configuration
+        {
+            public string Testing
+            {
+                get => GetString();
+                set => SetValue(value);
             }
         }
     }
